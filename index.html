@@ -4,24 +4,27 @@
   <meta charset="utf-8" />
   <title>Ocular Drift & Efficient Coding — Demo</title>
 
-  <!-- Pin a stable PyScript release (2024.11.1). -->
+  <!-- Pin a stable PyScript release -->
   <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css">
   <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
 
+  <!-- Load the scientific stack before any Python runs -->
+  <script type="py-config">
+packages = ["numpy", "scipy", "matplotlib"]
+  </script>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-           max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1200px; margin: 24px auto; padding: 0 16px;
+    }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
     .panel { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
     canvas { max-width: 100%; }
     .controls label { display:block; margin: 8px 0 2px; }
     .muted { color:#666; font-size: 0.9rem; }
+    h1 { margin-top: 0; }
   </style>
-
-  <!-- PyScript config (new API): declare Python packages -->
-  <script type="py-config">
-packages = ["numpy", "scipy", "matplotlib"]
-  </script>
 </head>
 <body>
   <h1>Ocular Drift transforms retinal image statistics and spatiotemporal RFs</h1>
@@ -67,12 +70,14 @@ packages = ["numpy", "scipy", "matplotlib"]
 
   <div class="panel" style="margin-top:16px;">
     <h3>Actual drift segment (optional)</h3>
-    <p class="muted">Place your GIF at <code>assets/actual_drift_segment_example.gif</code>.</p>
+    <p class="muted">If present at <code>assets/actual_drift_segment_example.gif</code>, it will display below.</p>
     <img src="assets/actual_drift_segment_example.gif" alt="Actual drift segment" style="max-width:100%;"/>
   </div>
 
-  <!-- Load your Python module, then run the initial renders (new API uses type="py") -->
+  <!-- Load your Python module -->
   <script type="py" src="app.py"></script>
+
+  <!-- Run initial renders and wire the Update button -->
   <script type="py">
 from app import render_inputs, render_psd_inputs, render_drift_frames, render_psd_drift, update_all
 from js import document
@@ -83,7 +88,7 @@ render_psd_inputs("#psd_inputs_canvas")
 render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
 render_psd_drift("#psd_drift_canvas")
 
-# button to recompute with current slider values
+# recompute on click
 document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
   </script>
 </body>
