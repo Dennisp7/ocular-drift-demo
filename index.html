@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Ocular Drift & Efficient Coding — Demo</title>
+  <!-- PyScript (loads Python in browser via Pyodide) -->
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 24px auto; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .panel { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
+    canvas { max-width: 100%; }
+    .controls label { display:block; margin: 8px 0 2px; }
+    .muted { color:#666; font-size: 0.9rem; }
+  </style>
+  <py-config>
+    packages = [
+      "numpy",
+      "scipy",
+      "matplotlib"
+    ]
+  </py-config>
+</head>
+<body>
+  <h1>Ocular Drift transforms retinal image statistics and spatiotemporal RFs</h1>
+  <p class="muted">
+    Fully static, runs in your browser (PyScript). Use the controls, then press <b>Update</b>.
+  </p>
+
+  <div class="panel controls">
+    <h2>Controls</h2>
+    <label>Image size (N×N): <input id="n" type="range" min="128" max="512" step="64" value="256" oninput="nVal.textContent=this.value"><span id="nVal">256</span></label>
+    <label>α (power ~ 1/f^α): <input id="alpha" type="range" min="0.5" max="3.0" step="0.1" value="2.0" oninput="aVal.textContent=this.value"><span id="aVal">2.0</span></label>
+    <label>σ<sub>center</sub>: <input id="sigc" type="range" min="0.5" max="5.0" step="0.1" value="1.0" oninput="scVal.textContent=this.value"><span id="scVal">1.0</span></label>
+    <label>σ<sub>surround</sub>: <input id="sigs" type="range" min="1.0" max="10.0" step="0.1" value="3.0" oninput="ssVal.textContent=this.value"><span id="ssVal">3.0</span></label>
+    <label>Drift Δy (px): <input id="dy" type="range" min="-4" max="4" step="1" value="1" oninput="dyVal.textContent=this.value"><span id="dyVal">1</span></label>
+    <label>Drift Δx (px): <input id="dx" type="range" min="-4" max="4" step="1" value="0" oninput="dxVal.textContent=this.value"><span id="dxVal">0</span></label>
+    <button id="updateBtn">Update</button>
+  </div>
+
+  <div class="row" style="margin-top:16px;">
+    <div class="panel">
+      <h3>Input (1/f^α) and DoG-filtered</h3>
+      <py-script>
+from app import render_inputs
+render_inputs("#img_canvas", "#dog_canvas")
+      </py-script>
+      <canvas id="img_canvas"></canvas>
+      <canvas id="dog_canvas" style="margin-top:8px;"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>Radial Power Spectra (log–log)</h3>
+      <py-script>
+from app import render_psd_inputs
+render_psd_inputs("#psd_inputs_canvas")
+      </py-script>
+      <canvas id="psd_inputs_canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:16px;">
+    <div class="panel">
+      <h3>Drift: Frame t, t+1 (shifted), and Temporal difference</h3>
+      <py-script>
+from app import render_drift_frames
+render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
+      </py-script>
+      <canvas id="t_canvas"></canvas>
+      <canvas id="t1_canvas" style="margin-top:8px;"></canvas>
+      <canvas id="diff_canvas" style="margin-top:8px;"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>PSD: Input vs Temporal difference</h3>
+      <py-script>
+from app import render_psd_drift
+render_psd_drift("#psd_drift_canvas")
+      </py-script>
+      <canvas id="psd_drift_canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <h3>Actual drift segment (optional)</h3>
+    <p class="muted">If you place your GIF at <code>assets/actual_drift_segment_example.gif</code>, it will show below.</p>
+    <img src="assets/actual_drift_segment_example.gif" alt="Actual drift segment" style="max-width:100%;"/>
+  </div>
+
+  <!-- Hook up the Update button to re-run computations with new UI values -->
+  <py-script>
+from app import update_all
+from js import document
+document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
+  </py-script>
+</body>
+</html>
