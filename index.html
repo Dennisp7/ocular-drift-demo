@@ -94,19 +94,21 @@ console.log(diag)
   </py-script>
 
   <!-- 2) Import your module and render -->
-  <py-script>
+
+  <py-script main>
 from js import document, console
 try:
-    from app import render_inputs, render_psd_inputs, render_drift_frames, render_psd_drift, update_all
-    render_inputs("#img_canvas", "#dog_canvas")
-    render_psd_inputs("#psd_inputs_canvas")
-    render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
-    render_psd_drift("#psd_drift_canvas")
-    document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
-    console.log("✅ App initialized.")
+    from app import render_inputs, render_psd_inputs, render_drift_frames, render_psd_drift, update_all
+    render_inputs("#img_canvas", "#dog_canvas")
+    render_psd_inputs("#psd_inputs_canvas")
+    render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
+    render_psd_drift("#psd_drift_canvas")
+    document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
+    console.log("✅ App initialized.")
 except Exception as e:
-    document.getElementById("diag").textContent += f"\nApp load error: {e}"
-    console.error("App load error:", e)
-  </py-script>
+    document.getElementById("diag").textContent += f"\nApp load error: {e}"
+    console.error("App load error:", e)
+  </py-script>
+  
 </body>
 </html>
