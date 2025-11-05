@@ -1,107 +1,548 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Ocular Drift & Efficient Coding — Demo</title>
-  <link rel="stylesheet" href="https://pyscript.net/releases/2025.10.2/core.css" />
-  <script type="module" src="https://pyscript.net/releases/2025.10.2/core.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ocular Drift Transforms Retinal Encoding</title>
 
-    <py-config>
-packages = ["numpy", "scipy", "matplotlib"]
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-[[fetch]]
-files = ["./app.py"]
-  </py-config>
+  <!-- MathJax for inline/block math ($ ... $ and $$ ... $$) -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-           max-width: 1200px; margin: 24px auto; padding: 0 16px; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-    .panel { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
-    canvas { max-width: 100%; }
-    .controls label { display:block; margin: 8px 0 2px; }
-    .muted { color:#666; font-size: 0.9rem; }
-    h1 { margin-top: 0; }
-    pre#diag { background:#111; color:#0f0; padding:10px; border-radius:8px; white-space:pre-wrap; }
-  </style>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+    :root { --primary-color: #4f46e5; }
+    body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+    .nav-button { transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+    }
+    .nav-button:disabled { cursor: not-allowed; background-color: #e5e7eb !important; color: #9ca3af !important; box-shadow: none; }
+
+    .content-section { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from {opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+
+    .sim-canvas { border-radius: 0.75rem; max-width: 100%; height: auto; image-rendering: pixelated; background-color: #f7f7f7; }
+
+    /* Optional background for trajectory canvas — replace URL with your own scene if desired */
+    #canvas-trajectory {
+      background-image: url('https://placehold.co/256x256/000000/FFFFFF?text=Scene');
+      background-size: cover; background-position: center; border: 2px solid #a855f7;
+    }
+  </style>
 </head>
-<body>
-  <h1>Ocular Drift transforms retinal image statistics and spatiotemporal RFs</h1>
-  <p class="muted">Runs fully in your browser via PyScript (Pyodide). Move sliders, then press <b>Update</b>.</p>
+<body class="bg-gray-50 text-gray-800">
+  <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
-  <div class="panel controls">
-    <h2>Controls</h2>
-    <label>Image size (N×N): <input id="n" type="range" min="128" max="512" step="64" value="256" oninput="nVal.textContent=this.value"><span id="nVal">256</span></label>
-    <label>α (power ~ 1/f^α): <input id="alpha" type="range" min="0.5" max="3.0" step="0.1" value="2.0" oninput="aVal.textContent=this.value"><span id="aVal">2.0</span></label>
-    <label>σ<sub>center</sub>: <input id="sigc" type="range" min="0.5" max="5.0" step="0.1" value="1.0" oninput="scVal.textContent=this.value"><span id="scVal">1.0</span></label>
-    <label>σ<sub>surround</sub>: <input id="sigs" type="range" min="1.0" max="10.0" step="0.1" value="3.0" oninput="ssVal.textContent=this.value"><span id="ssVal">3.0</span></label>
-    <label>Drift Δy (px): <input id="dy" type="range" min="-4" max="4" step="1" value="1" oninput="dyVal.textContent=this.value"><span id="dyVal">1</span></label>
-    <label>Drift Δx (px): <input id="dx" type="range" min="-4" max="4" step="1" value="0" oninput="dxVal.textContent=this.value"><span id="dxVal">0</span></label>
-    <button id="updateBtn">Update</button>
-  </div>
+    <!-- Header -->
+    <header class="text-center py-10 bg-white shadow-lg rounded-2xl mb-8">
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-700 leading-tight">
+        Ocular Drift Transforms Retinal Encoding
+      </h1>
+      <p class="mt-2 text-xl text-gray-600">Interactive Walkthrough & Live Drift Simulation</p>
+      <p class="mt-4 text-sm text-gray-500 italic">(Dennis Perez, Alexander Belsten, and Jacob Yates)</p>
+    </header>
 
-  <div class="row" style="margin-top:16px;">
-    <div class="panel">
-      <h3>Input (1/f^α) and DoG-filtered</h3>
-      <canvas id="img_canvas"></canvas>
-      <canvas id="dog_canvas" style="margin-top:8px;"></canvas>
-    </div>
-    <div class="panel">
-      <h3>Radial Power Spectra (log–log)</h3>
-      <canvas id="psd_inputs_canvas"></canvas>
-    </div>
-  </div>
+    <div class="grid lg:grid-cols-3 gap-8">
+      <!-- Left column -->
+      <div class="lg:col-span-1">
+        <div id="step-tracker" class="bg-white p-6 rounded-2xl shadow-xl sticky top-8">
+          <h2 class="text-2xl font-bold mb-4 text-gray-900 border-b pb-2">Narrative Steps</h2>
+          <div id="nav-buttons" class="space-y-4"></div>
+        </div>
 
-  <div class="row" style="margin-top:16px;">
-    <div class="panel">
-      <h3>Drift: Frame t, t+1 (shifted) and Temporal difference</h3>
-      <canvas id="t_canvas"></canvas>
-      <canvas id="t1_canvas" style="margin-top:8px;"></canvas>
-      <canvas id="diff_canvas" style="margin-top:8px;"></canvas>
-    </div>
-    <div class="panel">
-      <h3>PSD: Input vs Temporal difference</h3>
-      <canvas id="psd_drift_canvas"></canvas>
-    </div>
-  </div>
+        <!-- Controls (only shown on steps 2 & 3) -->
+        <div id="simulation-controls" class="bg-white p-6 rounded-2xl shadow-xl mt-8 hidden">
+          <h3 class="text-xl font-bold text-indigo-600 mb-4">Simulation Controls</h3>
 
-  <div class="panel" style="margin-top:16px;">
-    <h3>Actual drift segment (optional)</h3>
-    <p class="muted">If present at <code>assets/actual_drift_segment_example.gif</code>, it will display below.</p>
-    <img src="assets/actual_drift_segment_example.gif" alt="Actual drift segment" style="max-width:100%;" />
-  </div>
+          <div id="control-drift-speed" class="hidden">
+            <label for="drift-speed" class="block text-sm font-medium text-gray-700">Ocular Drift Speed ($\\mu$)</label>
+            <input type="range" id="drift-speed" min="0" max="4" value="2" step="0.1" class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
+            <span id="drift-speed-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 px/frame</span>
+          </div>
 
-  <div class="panel" style="margin-top:16px;">
-    <h3>Diagnostics</h3>
-    <pre id="diag">Loading…</pre>
-  </div>
+          <div id="control-noise-alpha" class="mt-4 hidden">
+            <label for="noise-alpha" class="block text-sm font-medium text-gray-700">Image Structure ($\\alpha$)</label>
+            <input type="range" id="noise-alpha" min="0.5" max="3.0" value="2.0" step="0.1" class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
+            <span id="noise-alpha-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 (Natural scenes ≈ $1/f^2$)</span>
+          </div>
 
-    <py-script>
-import sys
-diag = f"Python {sys.version.split()[0]} ready."
-try:
-    import numpy as np, scipy, matplotlib
-    diag += f"\nNumPy {np.__version__}, SciPy {scipy.__version__}, Matplotlib {matplotlib.__version__}"
-except Exception as e:
-    diag += f"\nPackage import error: {e}"
-from js import document, console
-document.getElementById("diag").textContent = diag
-console.log(diag)
-  </py-script>
+          <div id="control-diffusion-D" class="mt-4 hidden">
+            <label for="diffusion-d" class="block text-sm font-medium text-gray-700">Diffusion Constant ($D$)</label>
+            <input type="range" id="diffusion-d" min="0.1" max="20" value="5" step="0.1" class="w-full h-2 bg-purple-100 rounded-lg appearance-none cursor-pointer">
+            <span id="diffusion-d-value" class="text-sm font-mono text-gray-600 mt-1 block">5.0 (Larger D = more erratic motion)</span>
+          </div>
 
-    <py-script main>
-from js import document, console
-try:
-    from app import render_inputs, render_psd_inputs, render_drift_frames, render_psd_drift, update_all
-    render_inputs("#img_canvas", "#dog_canvas")
-    render_psd_inputs("#psd_inputs_canvas")
-    render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
-    render_psd_drift("#psd_drift_canvas")
-    document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
-    console.log("✅ App initialized.")
-except Exception as e:
-    document.getElementById("diag").textContent += f"\nApp load error: {e}"
-    console.error("App load error:", e)
-  </py-script>
+          <p id="control-tip" class="text-xs text-gray-500 mt-4 p-2 bg-yellow-50 rounded">
+            Adjust these sliders to see how the resulting <b>Temporal Difference</b> changes.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div class="lg:col-span-2">
+        <div class="bg-white p-8 rounded-2xl shadow-xl min-h-[600px]">
+          <h2 id="content-title" class="text-3xl font-bold text-gray-900 mb-6">Start Here</h2>
+
+          <div id="content-display" class="space-y-6 content-section text-lg text-gray-700">
+            <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg text-purple-800 flex items-center space-x-3">
+              <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-3.536a5 5 0 010-7.072m-2.121 7.072a8 8 0 010-11.314M12 4.573V4a1 1 0 011-1h2a1 1 0 011 1v.573m-6 3.14V7a1 1 0 011-1h2a1 1 0 011 1v.714m-4 1.847V9a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V11a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V13a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V15a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V17a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V19a1 1 0 011-1h2a1 1 0 011 1v.847"/></svg>
+              <div>
+                <h4 class="font-bold text-lg">Listen to the 5-Minute Walkthrough</h4>
+                <audio controls class="mt-2 w-full">
+                  <!-- Replace with your audio URL -->
+                  <source src="https://example.com/your-5-minute-recording.mp3" type="audio/mp3"/>
+                  Your browser does not support the audio element.
+                </audio>
+                <p class="text-xs mt-1">Replace the <code>src</code> with a real MP3/WAV URL to enable the voiceover.</p>
+              </div>
+            </div>
+
+            <p>Welcome to the interactive showcase of our work. Use the navigation steps on the left to move through the background, methods, and results.</p>
+            <p class="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
+              <b>Tip:</b> Click “1. The Context” to begin. Steps unlock progressively.
+            </p>
+          </div>
+
+          <!-- Visualization panel -->
+          <div id="visualization-panel" class="mt-8 pt-6 border-t border-gray-200">
+            <h3 class="text-2xl font-bold text-indigo-600 mb-4">Core Visualization</h3>
+            <div id="visual-content" class="min-h-[250px] flex items-center justify-center bg-gray-100 rounded-xl p-4 transition-all duration-500">
+              <p class="text-gray-500 italic">Content visualization will appear here when you reach the core steps.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------- Research Steps --------
+    const researchSteps = [
+      {
+        id: 1,
+        title: "The Context: Efficient Coding",
+        content: `
+          <p>Vision begins at the retina, a highly constrained system. Our research is grounded in the <b>Efficient Coding Hypothesis</b>, which suggests that sensory neurons evolve to maximize information about their natural environment while minimizing biological costs.</p>
+          <p>The retina acts as a filter tuned to remove predictable structure, or <b>redundancy</b>, from the input signal.</p>
+          <div class="flex items-center space-x-4 mt-6">
+            <span class="inline-block p-3 bg-indigo-100 rounded-full">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </span>
+            <p class="text-sm text-gray-600">Nearby pixels are highly correlated (power falls as $1/f^2$), so low spatial frequencies dominate.</p>
+          </div>
+        `,
+        isUnlocked: true,
+        visual: "Start"
+      },
+      {
+        id: 2,
+        title: "The Novel Input: Ocular Drift",
+        content: `
+          <p>The retinal input is not static. Tiny, involuntary eye movements—<b>ocular drift</b>—constantly shift the image, transforming input statistics.</p>
+          <div class="my-6 p-4 bg-blue-50 rounded-lg flex flex-col items-center justify-center">
+            <!-- Replace the GIF URL below with your asset in /assets/ -->
+            <img src="assets/actual_drift_segment_example.gif"
+                 alt="Ocular Drift Example GIF"
+                 class="rounded-lg shadow-md max-w-full"
+                 onerror="this.onerror=null; this.src='https://placehold.co/400x150/f0f9ff/3b82f6?text=Replace+with+your+GIF';"/>
+            <p class="text-xs text-blue-700 mt-2">Replace with your drift GIF (e.g., <code>assets/actual_drift_segment_example.gif</code>).</p>
+          </div>
+          <p class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded-lg">
+            <b>Interaction:</b> Watch the frames and the difference image below. The difference highlights <b>motion energy</b>, pushing power toward higher temporal frequencies. Use the sliders on the left.
+          </p>
+        `,
+        isUnlocked: false,
+        visual: "DriftSimulation"
+      },
+      {
+        id: 3,
+        title: "Drift Trajectory & Brownian Motion",
+        content: `
+          <p>Ocular drift is well-approximated as a <b>2D Brownian Motion</b> characterized by the <b>Diffusion Constant</b> $D$.</p>
+          <p class="mt-2">Larger $D$ means more volatile motion and broader coverage.</p>
+          <p class="p-3 bg-purple-50 border-l-4 border-purple-400 text-purple-800 rounded-lg mt-4">
+            <b>Interaction:</b> Adjust $D$ to see how volatility changes the trajectory (red path).
+          </p>
+        `,
+        isUnlocked: false,
+        visual: "TrajectoryDemo"
+      },
+      {
+        id: 4,
+        title: "The Model: Infomax Encoding",
+        content: `
+          <p>We trained a simple <b>Linear–Nonlinear (LN) Encoder</b> using an <b>Infomax</b> objective. RFs were learned under two inputs: (1) static natural movies and (2) natural movies with drift.</p>
+          <div class="mt-4 text-2xl font-mono text-indigo-700">
+            $$\\text{Maximize}\\; I(X;R) - \\lambda\\,\\text{Cost}(R)$$
+          </div>
+          <p class="mt-2 text-xs text-gray-500">Here, $X$ is the movie (static vs drifting) and $R$ the neural response.</p>
+        `,
+        isUnlocked: false,
+        visual: "Model"
+      },
+      {
+        id: 5,
+        title: "The Results: RF Transformation",
+        content: `
+          <p>With drift, optimal RFs change markedly:</p>
+          <ul class="list-disc list-inside space-y-1 ml-4 text-lg font-bold text-gray-800 mt-2">
+            <li>Temporal filters become <b>more bandpass</b>.</li>
+            <li>Spatial filters become <b>more lowpass</b>.</li>
+          </ul>
+        `,
+        isUnlocked: false,
+        visual: "ResultsSummary"
+      },
+      {
+        id: 6,
+        title: "Conclusion & Future Work",
+        content: `
+          <p>Ocular drift is an <i>active transformer</i> of the input signal that retinal encoding must accommodate.</p>
+          <p class="mt-2 text-gray-600">Next: compare predictions to RGC recordings (whitening behavior, mosaics) for biological validation.</p>
+        `,
+        isUnlocked: false,
+        visual: "Start"
+      }
+    ];
+
+    // -------- Global state & params --------
+    let currentStepId = researchSteps[0].id;
+    let animationFrameId = null;
+    let trajectoryFrameId = null;
+
+    const CANVAS_SIZE = 128;
+    const TRAJ_CANVAS_SIZE = 256;
+
+    const driftParams = { speed: 2.0, alpha: 2.0, shiftX: 0, shiftY: 0 };
+    const trajectoryParams = {
+      D: 5.0, history: [], maxHistory: 500,
+      currentX: TRAJ_CANVAS_SIZE / 2, currentY: TRAJ_CANVAS_SIZE / 2
+    };
+
+    // Noise data for step 2
+    let noiseData = new Float32Array(CANVAS_SIZE * CANVAS_SIZE);
+    let lastFrameData = null;
+
+    // -------- Utilities --------
+    function setCanvasHiDPI(canvas, width, height) {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return ctx;
+    }
+
+    function generateStructuredNoise(size, alpha) {
+      // Simple multi-octave random accumulation (demo-quality 1/f^alpha feel)
+      const data = new Float32Array(size * size);
+      const octaves = 6;
+      let totalMax = 0;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          let value = 0, frequency = 1, amplitude = 1, maxAmp = 0;
+          for (let i = 0; i < octaves; i++) {
+            value += (Math.random() * 2 - 1) * amplitude;
+            maxAmp += amplitude;
+            frequency *= 2;
+            amplitude /= Math.pow(2, alpha / 2);
+          }
+          value /= maxAmp;
+          data[y * size + x] = value;
+          totalMax = Math.max(totalMax, Math.abs(value));
+        }
+      }
+      for (let i = 0; i < data.length; i++) data[i] = (data[i] / totalMax + 1) / 2;
+      return data;
+    }
+
+    function reinitializeNoise() {
+      const alpha = parseFloat(document.getElementById('noise-alpha').value);
+      noiseData = generateStructuredNoise(CANVAS_SIZE, alpha);
+      // ensure we have a "previous frame" right away for the first diff
+      lastFrameData = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
+    }
+
+    function drawFrame(ctx, size, frameData) {
+      const imageData = ctx.createImageData(size, size);
+      const d = imageData.data;
+      for (let i = 0; i < size * size; i++) {
+        const g = frameData[i] * 255;
+        const o = i * 4;
+        d[o] = g; d[o + 1] = g; d[o + 2] = g; d[o + 3] = 255;
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function calculateCurrentFrame(size, data, shiftX, shiftY) {
+      const out = new Float32Array(size * size);
+      const wrap = (v,m) => (v % m + m) % m;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const sx = wrap(x - Math.floor(shiftX), size);
+          const sy = wrap(y - Math.floor(shiftY), size);
+          out[y * size + x] = data[sy * size + sx];
+        }
+      }
+      return out;
+    }
+
+    function calculateTemporalDifference(size, curr, prev) {
+      const diff = new Float32Array(size * size);
+      let maxD = 0;
+      for (let i = 0; i < diff.length; i++) {
+        const v = Math.abs(curr[i] - prev[i]);
+        diff[i] = v; maxD = Math.max(maxD, v);
+      }
+      if (maxD > 0) for (let i = 0; i < diff.length; i++) diff[i] /= maxD;
+      return diff;
+    }
+
+    // -------- Simulation (Step 2) --------
+    function simulationLoop() {
+      if (currentStepId !== 2) {
+        if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null; return;
+      }
+      const speed = parseFloat(document.getElementById('drift-speed').value);
+      driftParams.shiftX += (Math.random() * speed - speed / 2) * 0.1;
+      driftParams.shiftY += (Math.random() * speed - speed / 2) * 0.1;
+
+      const alphaNow = parseFloat(document.getElementById('noise-alpha').value);
+      if (alphaNow !== driftParams.alpha) {
+        driftParams.alpha = alphaNow;
+        reinitializeNoise();
+      }
+
+      const curr = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
+      const canvasCurrent = document.getElementById('canvas-current');
+      const canvasDiff = document.getElementById('canvas-diff');
+      if (canvasCurrent && canvasDiff) {
+        const ctxC = canvasCurrent.getContext('2d');
+        const ctxD = canvasDiff.getContext('2d');
+        drawFrame(ctxC, CANVAS_SIZE, curr);
+        if (lastFrameData) {
+          const df = calculateTemporalDifference(CANVAS_SIZE, curr, lastFrameData);
+          drawFrame(ctxD, CANVAS_SIZE, df);
+        }
+        lastFrameData = curr;
+      }
+      animationFrameId = requestAnimationFrame(simulationLoop);
+    }
+
+    // -------- Trajectory (Step 3) --------
+    function trajectoryLoop() {
+      if (currentStepId !== 3) {
+        if (trajectoryFrameId !== null) cancelAnimationFrame(trajectoryFrameId);
+        trajectoryFrameId = null; return;
+      }
+      const canvas = document.getElementById('canvas-trajectory');
+      if (!canvas) { trajectoryFrameId = requestAnimationFrame(trajectoryLoop); return; }
+      const ctx = canvas.getContext('2d');
+      const size = TRAJ_CANVAS_SIZE;
+      ctx.clearRect(0, 0, size, size);
+
+      const D = parseFloat(document.getElementById('diffusion-d').value);
+      trajectoryParams.D = D;
+      const variance = Math.sqrt(2 * D);
+      const randNorm = () => Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+      const stepX = variance * randNorm() * 0.5;
+      const stepY = variance * randNorm() * 0.5;
+
+      trajectoryParams.currentX = Math.min(size, Math.max(0, trajectoryParams.currentX + stepX));
+      trajectoryParams.currentY = Math.min(size, Math.max(0, trajectoryParams.currentY + stepY));
+
+      trajectoryParams.history.push({ x: trajectoryParams.currentX, y: trajectoryParams.currentY });
+      if (trajectoryParams.history.length > trajectoryParams.maxHistory) trajectoryParams.history.shift();
+
+      ctx.beginPath(); ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      for (let i = 1; i < trajectoryParams.history.length; i++) {
+        const a = (i / trajectoryParams.history.length) * 0.8 + 0.2;
+        ctx.strokeStyle = `rgba(239, 68, 68, ${a})`;
+        ctx.moveTo(trajectoryParams.history[i-1].x, trajectoryParams.history[i-1].y);
+        ctx.lineTo(trajectoryParams.history[i].x, trajectoryParams.history[i].y);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(trajectoryParams.currentX, trajectoryParams.currentY, 4, 0, 2 * Math.PI);
+      ctx.fill();
+
+      trajectoryFrameId = requestAnimationFrame(trajectoryLoop);
+    }
+
+    function resetTrajectory() {
+      trajectoryParams.history = [];
+      trajectoryParams.currentX = TRAJ_CANVAS_SIZE / 2;
+      trajectoryParams.currentY = TRAJ_CANVAS_SIZE / 2;
+      const canvas = document.getElementById('canvas-trajectory');
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, TRAJ_CANVAS_SIZE, TRAJ_CANVAS_SIZE);
+    }
+
+    // -------- UI wiring --------
+    function renderNavigation() {
+      const nav = document.getElementById('nav-buttons');
+      nav.innerHTML = researchSteps.map(step => {
+        const isCurrent = step.id === currentStepId;
+        const isEnabled = step.isUnlocked;
+        let cls = 'nav-button px-4 py-3 rounded-xl w-full text-left font-semibold text-base transition-all duration-300 flex items-center';
+        if (isCurrent) cls += ' bg-indigo-600 text-white transform scale-105';
+        else if (isEnabled) cls += ' bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700';
+        else cls += ' bg-gray-50 text-gray-400 opacity-60';
+        return `<button id="nav-step-${step.id}" class="${cls}" data-step-id="${step.id}" ${!isEnabled?'disabled':''}><span class="mr-3 font-extrabold">${step.id}.</span>${step.title}</button>`;
+      }).join('');
+      nav.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', e => {
+          const id = parseInt(e.currentTarget.dataset.stepId);
+          if (researchSteps.find(s => s.id === id).isUnlocked) goToStep(id);
+        });
+      });
+    }
+
+    function goToStep(stepId) {
+      const newStep = researchSteps.find(s => s.id === stepId);
+      if (!newStep) return;
+      const nxt = researchSteps.find(s => s.id === stepId + 1);
+      if (nxt) nxt.isUnlocked = true;     // progressive unlock
+
+      currentStepId = stepId;
+
+      const titleEl = document.getElementById('content-title');
+      const dispEl = document.getElementById('content-display');
+      dispEl.classList.remove('content-section'); void dispEl.offsetWidth; dispEl.classList.add('content-section');
+
+      titleEl.textContent = newStep.title;
+      dispEl.innerHTML = newStep.content;
+
+      renderVisualization(newStep.visual);
+      updateControlLabels();
+      setupControls(stepId);
+      renderNavigation();
+      if (window.MathJax) MathJax.typesetPromise?.(); // re-render math in new content
+    }
+
+    function setupControls(stepId) {
+      const controls = document.getElementById('simulation-controls');
+      const speedC = document.getElementById('control-drift-speed');
+      const alphaC = document.getElementById('control-noise-alpha');
+      const diffC = document.getElementById('control-diffusion-D');
+      const tip = document.getElementById('control-tip');
+
+      controls.classList.add('hidden'); speedC.classList.add('hidden'); alphaC.classList.add('hidden'); diffC.classList.add('hidden');
+
+      if (animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null;
+      if (trajectoryFrameId) cancelAnimationFrame(trajectoryFrameId); trajectoryFrameId = null;
+
+      if (stepId === 2) {
+        controls.classList.remove('hidden'); speedC.classList.remove('hidden'); alphaC.classList.remove('hidden');
+        tip.textContent = "Adjust these sliders to see how the resulting Temporal Difference changes.";
+        reinitializeNoise();
+        simulationLoop();
+      } else if (stepId === 3) {
+        controls.classList.remove('hidden'); diffC.classList.remove('hidden');
+        tip.textContent = "Observe how the Diffusion Constant (D) affects the volatility of the trajectory.";
+        resetTrajectory();
+        trajectoryLoop();
+      }
+    }
+
+    function updateControlLabels() {
+      const s = document.getElementById('drift-speed'); if (s) document.getElementById('drift-speed-value').textContent = `${parseFloat(s.value).toFixed(1)} px/frame`;
+      const a = document.getElementById('noise-alpha'); if (a) document.getElementById('noise-alpha-value').textContent = `${parseFloat(a.value).toFixed(1)} (Natural scenes ≈ 1/f^2 at 2.0)`;
+      const d = document.getElementById('diffusion-d'); if (d) document.getElementById('diffusion-d-value').textContent = `${parseFloat(d.value).toFixed(1)} (Larger D = more erratic motion)`;
+    }
+
+    function renderVisualization(kind) {
+      const host = document.getElementById('visual-content');
+
+      const simHTML = `
+        <div class="space-y-4 w-full">
+          <p class="text-gray-600 text-center text-sm">Live simulation of $1/f^{\\alpha}$ input (left) and Temporal Difference (right).</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col items-center">
+              <h4 class="font-semibold text-lg text-gray-800 mb-2">Current Retinal Input</h4>
+              <canvas id="canvas-current" class="sim-canvas border-2 border-indigo-300"></canvas>
+            </div>
+            <div class="flex flex-col items-center">
+              <h4 class="font-semibold text-lg text-gray-800 mb-2 text-red-600">Temporal Difference ($\\Delta t$)</h4>
+              <canvas id="canvas-diff" class="sim-canvas border-2 border-red-300"></canvas>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 text-center pt-2">The difference image highlights motion energy introduced by drift.</p>
+        </div>`;
+
+      const trajHTML = `
+        <div class="space-y-4 w-full text-center">
+          <h4 class="font-semibold text-lg text-gray-800 mb-2">Brownian Motion Trajectory ($D$)</h4>
+          <canvas id="canvas-trajectory" class="mx-auto sim-canvas"></canvas>
+          <p class="text-xs text-gray-500 pt-2">The red line shows the foveal path over a scene; $D$ controls volatility.</p>
+        </div>`;
+
+      const resultsHTML = `
+        <div class="w-full text-center p-4">
+          <p class="text-2xl font-bold mb-4 text-red-700">Model Prediction: RF Transformation</p>
+          <div class="grid grid-cols-2 gap-4 max-w-lg mx-auto">
+            <div class="p-4 bg-red-100 rounded-lg shadow-md">
+              <h5 class="font-extrabold text-2xl text-red-700">Temporal Selectivity $\\uparrow$</h5>
+              <p class="text-sm text-gray-700">Filters shift toward <b>bandpass</b> to encode higher temporal frequencies.</p>
+            </div>
+            <div class="p-4 bg-blue-100 rounded-lg shadow-md">
+              <h5 class="font-extrabold text-2xl text-blue-700">Spatial Selectivity $\\downarrow$</h5>
+              <p class="text-sm text-gray-700">Filters become <b>more lowpass</b>, trading fine spatial detail for temporal precision.</p>
+            </div>
+          </div>
+        </div>`;
+
+      const modelHTML = `
+        <div class="w-full text-center p-6">
+          <h4 class="text-xl font-bold text-gray-900 mb-4">The Infomax Efficient Coding Objective</h4>
+          <div class="mt-4 text-2xl font-mono text-indigo-700">
+            $$\\text{Maximize}\\; I(X; R) \\; - \\; \\lambda \\cdot \\text{Cost}(R)$$
+          </div>
+          <p class="mt-4 text-xs text-gray-500">Where $X$ is the input movie and $R$ is the neural response.</p>
+        </div>`;
+
+      switch (kind) {
+        case "DriftSimulation": host.innerHTML = simHTML; break;
+        case "TrajectoryDemo": host.innerHTML = trajHTML; break;
+        case "ResultsSummary": host.innerHTML = resultsHTML; break;
+        case "Model": host.innerHTML = modelHTML; break;
+        default: host.innerHTML = `<p class="text-gray-500 italic p-6">This panel will host the core visualization. Use the steps on the left.</p>`;
+      }
+
+      // Size canvases after insertion (HiDPI-aware)
+      const c1 = document.getElementById('canvas-current');
+      const c2 = document.getElementById('canvas-diff');
+      const ct = document.getElementById('canvas-trajectory');
+      if (c1) setCanvasHiDPI(c1, CANVAS_SIZE, CANVAS_SIZE);
+      if (c2) setCanvasHiDPI(c2, CANVAS_SIZE, CANVAS_SIZE);
+      if (ct) setCanvasHiDPI(ct, TRAJ_CANVAS_SIZE, TRAJ_CANVAS_SIZE);
+
+      if (window.MathJax) MathJax.typesetPromise?.();
+    }
+
+    // -------- Boot --------
+    window.onload = () => {
+      // Wire sliders (they may be hidden on first step)
+      document.getElementById('drift-speed').addEventListener('input', updateControlLabels);
+      document.getElementById('noise-alpha').addEventListener('input', updateControlLabels);
+      document.getElementById('noise-alpha').addEventListener('change', () => { reinitializeNoise(); updateControlLabels(); });
+      document.getElementById('diffusion-d').addEventListener('input', updateControlLabels);
+      document.getElementById('diffusion-d').addEventListener('change', resetTrajectory);
+
+      renderNavigation();
+      goToStep(researchSteps[0].id);
+    };
+  </script>
 </body>
 </html>
