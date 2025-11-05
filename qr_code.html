@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
+    </style>
+</head>
+<body class="p-8 flex items-center justify-center min-h-screen">
+
+    <div id="app" class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Shareable Demo Link</h1>
+        <p class="text-gray-600 mb-6">
+            Paste your finalized public link below (from GitHub Pages or Netlify) to generate a scannable QR code.
+        </p>
+
+        <!-- Input Field for the URL -->
+        <input 
+            type="url" 
+            id="urlInput" 
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 mb-6 text-lg"
+            placeholder="e.g., https://yourusername.github.io/demo"
+            value="YOUR_PUBLIC_GITHUB_PAGES_LINK_HERE" 
+            oninput="generateQRCode()"
+        >
+
+        <div class="border-4 border-dashed border-gray-200 p-4 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-3">Scan to Access</h2>
+            <img id="qrCodeImage" class="mx-auto border-4 border-gray-100 rounded-lg shadow-lg" alt="QR Code" style="width: 256px; height: 256px;">
+        </div>
+
+        <p class="text-sm text-gray-500">
+            **Right-click or long-press the image to save it.**
+        </p>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const qrCodeImage = document.getElementById('qrCodeImage');
+        const defaultUrl = urlInput.value;
+
+        // Function to encode text for use in a URL
+        function encodeText(text) {
+            return encodeURIComponent(text);
+        }
+
+        function generateQRCode() {
+            let urlToEncode = urlInput.value.trim();
+
+            if (!urlToEncode || urlToEncode === "YOUR_PUBLIC_GITHUB_PAGES_LINK_HERE") {
+                // Use a generic placeholder QR code if the user hasn't replaced the text
+                urlToEncode = "https://www.google.com/search?q=Please+update+your+link"; 
+            }
+
+            // Google Charts API for QR Code Generation:
+            // cht=qr (chart type is QR)
+            // chs=256x256 (chart size)
+            // chl=... (chart data/link)
+            const apiUrl = `https://chart.googleapis.com/chart?cht=qr&chs=256x256&chl=${encodeText(urlToEncode)}`;
+            
+            qrCodeImage.src = apiUrl;
+        }
+
+        // Initialize the QR code on load
+        window.onload = generateQRCode;
+    </script>
+
+</body>
+</html>
