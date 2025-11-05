@@ -4,37 +4,33 @@
   <meta charset="utf-8" />
   <title>Ocular Drift & Efficient Coding — Demo</title>
 
-  <!-- Stable PyScript runtime -->
-  <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css">
-  <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
+  <!-- Use the stable 2023.11.1 build with legacy tags -->
+  <link rel="stylesheet" href="https://pyscript.net/2023.11.1/pyscript.css" />
+  <script defer src="https://pyscript.net/2023.11.1/pyscript.js"></script>
 
-  <!-- Explicitly load scientific stack and fetch app.py -->
-  <script type="py-config">
+  <!-- Global PyScript config: preload packages and fetch app.py -->
+  <py-config>
 packages = ["numpy", "scipy", "matplotlib"]
 
 [[fetch]]
 files = ["./app.py"]
-  </script>
+  </py-config>
 
   <style>
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      max-width: 1200px; margin: 24px auto; padding: 0 16px;
-    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           max-width: 1200px; margin: 24px auto; padding: 0 16px; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
     .panel { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
     canvas { max-width: 100%; }
     .controls label { display:block; margin: 8px 0 2px; }
     .muted { color:#777; font-size: 0.9rem; }
     h1 { margin-top: 0; }
+    pre#diag { background:#111; color:#0f0; padding:10px; border-radius:8px; white-space:pre-wrap; }
   </style>
 </head>
-
 <body>
   <h1>Ocular Drift transforms retinal image statistics and spatiotemporal RFs</h1>
-  <p class="muted">
-    Runs fully in the browser via PyScript (Pyodide). Move sliders, then press <b>Update</b>.
-  </p>
+  <p class="muted">Runs fully in your browser via PyScript (Pyodide). Move sliders, then press <b>Update</b>.</p>
 
   <div class="panel controls">
     <h2>Controls</h2>
@@ -61,7 +57,7 @@ files = ["./app.py"]
 
   <div class="row" style="margin-top:16px;">
     <div class="panel">
-      <h3>Drift: Frame t, t+1 (shifted), and Temporal difference</h3>
+      <h3>Drift: Frame t, t+1 (shifted) and Temporal difference</h3>
       <canvas id="t_canvas"></canvas>
       <canvas id="t1_canvas" style="margin-top:8px;"></canvas>
       <canvas id="diff_canvas" style="margin-top:8px;"></canvas>
@@ -75,25 +71,42 @@ files = ["./app.py"]
   <div class="panel" style="margin-top:16px;">
     <h3>Actual drift segment (optional)</h3>
     <p class="muted">If present at <code>assets/actual_drift_segment_example.gif</code>, it will display below.</p>
-    <img src="assets/actual_drift_segment_example.gif" alt="Actual drift segment" style="max-width:100%;"/>
+    <img src="assets/actual_drift_segment_example.gif" alt="Actual drift segment" style="max-width:100%;" />
   </div>
 
-  <!-- Load your Python module -->
-  <script type="py" src="app.py"></script>
+  <div class="panel" style="margin-top:16px;">
+    <h3>Diagnostics</h3>
+    <pre id="diag">Loading…</pre>
+  </div>
 
-  <!-- Run initial renders and wire the Update button -->
-  <script type="py">
-from app import render_inputs, render_psd_inputs, render_drift_frames, render_psd_drift, update_all
-from js import document
+  <!-- 1) Confirm packages -->
+  <py-script>
+import sys
+diag = f"Python {sys.version.split()[0]} ready."
+try:
+    import numpy as np, scipy, matplotlib
+    diag += f"\nNumPy {np.__version__}, SciPy {scipy.__version__}, Matplotlib {matplotlib.__version__}"
+except Exception as e:
+    diag += f"\nPackage import error: {e}"
+from js import document, console
+document.getElementById("diag").textContent = diag
+console.log(diag)
+  </py-script>
 
-# initial render
-render_inputs("#img_canvas", "#dog_canvas")
-render_psd_inputs("#psd_inputs_canvas")
-render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
-render_psd_drift("#psd_drift_canvas")
-
-# recompute on click
-document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
-  </script>
+  <!-- 2) Import your module and render -->
+  <py-script>
+from js import document, console
+try:
+    from app import render_inputs, render_psd_inputs, render_drift_frames, render_psd_drift, update_all
+    render_inputs("#img_canvas", "#dog_canvas")
+    render_psd_inputs("#psd_inputs_canvas")
+    render_drift_frames("#t_canvas", "#t1_canvas", "#diff_canvas")
+    render_psd_drift("#psd_drift_canvas")
+    document.getElementById("updateBtn").addEventListener("click", lambda evt: update_all())
+    console.log("✅ App initialized.")
+except Exception as e:
+    document.getElementById("diag").textContent += f"\nApp load error: {e}"
+    console.error("App load error:", e)
+  </py-script>
 </body>
 </html>
