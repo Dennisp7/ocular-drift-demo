@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <title>Ocular Drift & Efficient Coding — Demo</title>
 
-  <!-- Use the stable 2023.11.1 build with legacy tags -->
-  <link rel="stylesheet" href="https://pyscript.net/2023.11.1/pyscript.css" />
-  <script defer src="https://pyscript.net/2023.11.1/pyscript.js"></script>
+  <!-- Load PyScript (stable) from jsDelivr to avoid CORB on some networks -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/pyscript/pyscript@2023.11.1/pyscript.css" />
+  <script defer src="https://cdn.jsdelivr.net/gh/pyscript/pyscript@2023.11.1/pyscript.js"></script>
 
-  <!-- Global PyScript config: preload packages and fetch app.py -->
+  <!-- Preload scientific stack and make app.py importable -->
   <py-config>
 packages = ["numpy", "scipy", "matplotlib"]
 
@@ -23,7 +23,7 @@ files = ["./app.py"]
     .panel { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
     canvas { max-width: 100%; }
     .controls label { display:block; margin: 8px 0 2px; }
-    .muted { color:#777; font-size: 0.9rem; }
+    .muted { color:#666; font-size: 0.9rem; }
     h1 { margin-top: 0; }
     pre#diag { background:#111; color:#0f0; padding:10px; border-radius:8px; white-space:pre-wrap; }
   </style>
