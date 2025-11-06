@@ -141,6 +141,7 @@
         isUnlocked: true,
         visual: "Start"
       },
+      <!--
       {
         id: 2,
         title: "The Novel Input: Ocular Drift",
@@ -157,6 +158,26 @@
           <p class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded-lg">
             <b>Interaction:</b> Watch the frames and the difference image below. The difference highlights <b>motion energy</b>, pushing power toward higher temporal frequencies. Use the sliders on the left.
           </p>
+        `,
+        isUnlocked: false,
+        visual: "DriftSimulation"
+      }, -->
+      {
+        id: 2,
+        title: "The Novel Input: Ocular Drift",
+        content: `
+            <p>The retinal input is not static. Tiny, involuntary eye movements—<b>ocular drift</b>—constantly shift the image, transforming input statistics.</p>
+            <div class="my-6 p-4 bg-blue-50 rounded-lg flex flex-col items-center justify-center">
+            <img src="brownian_example_14.gif"
+                loading="lazy" decoding="async"
+                alt="Ocular Drift Example GIF"
+                class="rounded-lg shadow-md max-w-full"
+                onerror="this.onerror=null; this.src='https://placehold.co/400x150/f0f9ff/3b82f6?text=GIF+Not+Found';"/>
+            <p class="text-xs text-blue-700 mt-2">Ocular drift example (<code>brownian_example_14.gif</code>).</p>
+            </div>
+            <p class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded-lg">
+            <b>Interaction:</b> Watch the frames and the difference image below. The difference highlights <b>motion energy</b>, pushing power toward higher temporal frequencies. Use the sliders on the left.
+            </p>
         `,
         isUnlocked: false,
         visual: "DriftSimulation"
