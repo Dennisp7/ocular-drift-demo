@@ -125,8 +125,42 @@
   <script>
     // -------- Research Steps --------
     const researchSteps = [
+        {
+          id: 1,
+          title: "Project Overview",
+          content: `
+            <p>
+              Vision begins with encoding in the retina. To understand how vision works, we first need to understand the signal the retina receives.
+            </p>
+      
+            <p>
+              That signal is not random. Natural scenes contain structured patterns across space and time, including edges, textures, and motion. At the same time, the eyes are constantly moving, which changes the image that falls on the retina from moment to moment.
+            </p>
+      
+            <p>
+              This project asks what the retinal input looks like mathematically, and whether those input statistics can help explain why retinal neurons respond the way they do.
+            </p>
+      
+            <p>
+              The central idea is that retinal organization can be studied as an efficient encoding problem: given the signal available at the retina, how should limited neural resources be allocated?
+            </p>
+      
+            <div class="mt-6 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
+              <p class="font-semibold">This website walks through:</p>
+              <ol class="list-decimal list-inside mt-2 space-y-1 text-sm">
+                <li>Why efficient coding is useful for studying the retina</li>
+                <li>How natural visual input is structured</li>
+                <li>How ocular drift changes the signal at the retina</li>
+                <li>How an efficient coding model learns receptive fields from that input</li>
+                <li>What the results suggest about retinal organization</li>
+              </ol>
+            </div>
+          `,
+          isUnlocked: true,
+          visual: "Start"
+        },
       {
-        id: 1,
+        id: 2,
         title: "The Context: Efficient Coding",
         content: `
           <p>Vision begins at the retina, a highly constrained system set to process a complex world. We approach understanding the retina from a systems neuroscience perspective, where understanding neural function (the system) requires understanding the statistical properites of the signal it is designed to process. Our research is grounded in the <b>Efficient Coding Hypothesis</b>, which suggests that sensory neurons evolve to maximize information about their natural environment while minimizing biological costs.</p>
@@ -155,7 +189,7 @@
         visual: "Start"
       },
       {
-        id: 2,
+        id: 3,
         title: "The Novel Input: Ocular Drift",
         content: `
             <p>The retinal input is not static. Tiny, involuntary eye movements—<b>ocular drift</b>—constantly shift the image, transforming input statistics.</p>
@@ -177,7 +211,7 @@
         visual: "DriftSimulation"
       },
       {
-        id: 3,
+        id: 4,
         title: "Drift Trajectory & Brownian Motion",
         content: `
           <p>Ocular drift is well-approximated as a <b>2D Brownian Motion</b> characterized by the <b>Diffusion Constant</b> $D$.</p>
@@ -190,7 +224,7 @@
         visual: "TrajectoryDemo"
       },
       {
-        id: 4,
+        id: 5,
         title: "The Model: Infomax Encoding",
         content: `
           <p>We trained a simple <b>Linear–Nonlinear (LN) Encoder</b> using an <b>Infomax</b> objective. RFs were learned under two inputs: (1) static natural movies and (2) natural movies with drift.</p>
@@ -203,7 +237,7 @@
         visual: "Model"
       },
       {
-        id: 5,
+        id: 6,
         title: "The Results: RF Transformation",
         content: `
           <p>With drift, optimal RFs change markedly:</p>
@@ -216,7 +250,7 @@
         visual: "ResultsSummary"
       },
       {
-        id: 6,
+        id: 7,
         title: "Conclusion & Future Work",
         content: `
           <p>Ocular drift is an <i>active transformer</i> of the input signal that retinal encoding must accommodate.</p>
