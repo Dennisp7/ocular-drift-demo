@@ -240,11 +240,16 @@
         id: 6,
         title: "The Results: RF Transformation",
         content: `
-          <p>With drift, optimal RFs change markedly:</p>
+          <p>With drift, optimal receptive fields change in two main ways:</p>
+      
           <ul class="list-disc list-inside space-y-1 ml-4 text-lg font-bold text-gray-800 mt-2">
             <li>Temporal filters become <b>more bandpass</b>.</li>
             <li>Spatial filters become <b>more lowpass</b>.</li>
           </ul>
+      
+          <p class="mt-4 text-gray-600">
+            The animations below summarize how receptive field structure changes across training and across ON/OFF populations.
+          </p>
         `,
         isUnlocked: false,
         visual: "ResultsSummary"
@@ -540,14 +545,50 @@
       const resultsHTML = `
         <div class="w-full text-center p-4">
           <p class="text-2xl font-bold mb-4 text-red-700">Model Prediction: RF Transformation</p>
-          <div class="grid grid-cols-2 gap-4 max-w-lg mx-auto">
+      
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-6">
             <div class="p-4 bg-red-100 rounded-lg shadow-md">
-              <h5 class="font-extrabold text-2xl text-red-700">Temporal Selectivity $\\uparrow$</h5>
+              <h5 class="font-extrabold text-xl text-red-700">Temporal Selectivity $\\uparrow$</h5>
               <p class="text-sm text-gray-700">Filters shift toward <b>bandpass</b> to encode higher temporal frequencies.</p>
             </div>
+      
             <div class="p-4 bg-blue-100 rounded-lg shadow-md">
-              <h5 class="font-extrabold text-2xl text-blue-700">Spatial Selectivity $\\downarrow$</h5>
+              <h5 class="font-extrabold text-xl text-blue-700">Spatial Selectivity $\\downarrow$</h5>
               <p class="text-sm text-gray-700">Filters become <b>more lowpass</b>, trading fine spatial detail for temporal precision.</p>
+            </div>
+          </div>
+      
+          <div class="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+              <h5 class="font-bold text-gray-900 mb-2">Receptive Field Evolution</h5>
+              <img src="assets/weights_evolution_video0.gif"
+                   loading="lazy"
+                   decoding="async"
+                   alt="Animation showing receptive field weights evolving during training"
+                   class="rounded-lg shadow-sm max-w-full mx-auto"
+                   onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Weights+Evolution+GIF+Not+Found';" />
+            </div>
+      
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+                <h5 class="font-bold text-gray-900 mb-2">ON Cell Contours</h5>
+                <img src="assets/contours_ON_0.gif"
+                     loading="lazy"
+                     decoding="async"
+                     alt="Animation showing ON receptive field contours"
+                     class="rounded-lg shadow-sm max-w-full mx-auto"
+                     onerror="this.onerror=null; this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=ON+Contours+GIF+Not+Found';" />
+              </div>
+      
+              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+                <h5 class="font-bold text-gray-900 mb-2">OFF Cell Contours</h5>
+                <img src="assets/contours_OFF_0.gif"
+                     loading="lazy"
+                     decoding="async"
+                     alt="Animation showing OFF receptive field contours"
+                     class="rounded-lg shadow-sm max-w-full mx-auto"
+                     onerror="this.onerror=null; this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=OFF+Contours+GIF+Not+Found';" />
+              </div>
             </div>
           </div>
         </div>`;
