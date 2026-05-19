@@ -533,7 +533,28 @@
         case "TrajectoryDemo": host.innerHTML = trajHTML; break;
         case "ResultsSummary": host.innerHTML = resultsHTML; break;
         case "Model": host.innerHTML = modelHTML; break;
-        default: host.innerHTML = `<p class="text-gray-500 italic p-6">This panel will host the core visualization. Use the steps on the left.</p>`;
+        default:
+          host.innerHTML = `
+            <a href="assets/SFN_poster_dennisPerez.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="block w-full text-center group">
+        
+              <p class="text-sm font-semibold text-indigo-700 mb-4">
+                To see the full project end-to-end poster, click this image.
+              </p>
+        
+              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4 transition group-hover:shadow-xl group-hover:scale-[1.01]">
+                <iframe src="assets/SFN_poster_dennisPerez(used_this).pdf#page=1"
+                        class="w-full h-[420px] rounded-lg border border-gray-200 pointer-events-none"
+                        title="SFN poster preview">
+                </iframe>
+              </div>
+        
+              <p class="text-xs text-gray-500 mt-3">
+                Opens the full PDF poster in a new tab.
+              </p>
+            </a>`;
       }
 
       // Size canvases after insertion (HiDPI-aware)
