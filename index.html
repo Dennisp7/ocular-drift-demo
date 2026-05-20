@@ -4,79 +4,103 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ocular Drift Transforms Retinal Encoding</title>
-
-  <!-- Tailwind CSS (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- MathJax for inline/block math ($ ... $ and $$ ... $$) -->
   <script>
     window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
   </script>
   <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-
     :root { --primary-color: #4f46e5; }
     body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
 
-    .nav-button { transition: all 0.3s ease;
+    .nav-button {
+      transition: all 0.3s ease;
       box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
     }
     .nav-button:disabled { cursor: not-allowed; background-color: #e5e7eb !important; color: #9ca3af !important; box-shadow: none; }
 
     .content-section { animation: fadeIn 0.5s ease-out; }
-    @keyframes fadeIn { from {opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
 
-    .sim-canvas { border-radius: 0.75rem; width: 100%; aspect-ratio: 1 / 1; display: block; image-rendering: pixelated; background-color: #f7f7f7; }
+    /* FIX canvas-sizing: CSS owns display size; JS only sets internal buffer */
+    .sim-canvas {
+      border-radius: 0.75rem;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: block;
+      image-rendering: pixelated;
+      background-color: #f7f7f7;
+    }
 
     #canvas-trajectory {
       background-image: url('https://placehold.co/256x256/000000/FFFFFF?text=Scene');
-      background-size: cover; background-position: center; border: 2px solid #a855f7;
+      background-size: cover;
+      background-position: center;
+      border: 2px solid #a855f7;
     }
+
+    /* FIX controls-bug: hide via attribute selector so MathJax can't pull content out */
+    [data-hidden="true"] { display: none !important; }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
-  <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
-    <!-- Header -->
-    <header class="text-center py-10 bg-white shadow-lg rounded-2xl mb-8">
-      <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-700 leading-tight">
-        Ocular Drift Transforms Retinal Encoding
-      </h1>
-      <p class="mt-2 text-xl text-gray-600">Interactive Walkthrough &amp; Live Drift Simulation</p>
-      <p class="mt-4 text-sm text-gray-500 italic">(Dennis Perez, Alexander Belsten, and Jacob Yates)</p>
-    </header>
+  <!-- Header -->
+  <header class="text-center py-10 bg-white shadow-lg rounded-2xl mb-8">
+    <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-700 leading-tight">
+      Ocular Drift Transforms Retinal Encoding
+    </h1>
+    <p class="mt-2 text-xl text-gray-600">Interactive Walkthrough &amp; Live Drift Simulation</p>
+    <p class="mt-4 text-sm text-gray-500 italic">(Dennis Perez, Alexander Belsten, and Jacob Yates)</p>
+  </header>
 
-    <div class="grid lg:grid-cols-3 gap-8">
-      <!-- Left column — single sticky wrapper keeps nav + controls together -->
-      <div class="lg:col-span-1">
-        <div class="sticky top-8 flex flex-col gap-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
+  <div class="grid lg:grid-cols-3 gap-8">
+
+    <!-- ===== Left column — single sticky wrapper ===== -->
+    <div class="lg:col-span-1">
+      <div class="sticky top-8 flex flex-col gap-6" style="max-height: calc(100vh - 4rem); overflow-y: auto;">
 
         <div id="step-tracker" class="bg-white p-6 rounded-2xl shadow-xl">
           <h2 class="text-2xl font-bold mb-4 text-gray-900 border-b pb-2">Narrative Steps</h2>
           <div id="nav-buttons" class="space-y-4"></div>
         </div>
 
-        <!-- Controls (only shown on steps 3 & 4) -->
-        <div id="simulation-controls" class="bg-white p-6 rounded-2xl shadow-xl hidden">
+        <!--
+          FIX #5 (controls bug): visibility is toggled with data-hidden + CSS [data-hidden="true"]
+          instead of Tailwind's `hidden` class so MathJax's document-wide typesetPromise
+          cannot extract & render math from inside a supposedly-hidden element.
+          Labels also use Unicode (μ, α) instead of $...$ to keep MathJax out entirely.
+        -->
+        <div id="simulation-controls" data-hidden="true"
+             class="bg-white p-6 rounded-2xl shadow-xl">
           <h3 class="text-xl font-bold text-indigo-600 mb-4">Simulation Controls</h3>
 
-          <div id="control-drift-speed" class="hidden">
-            <label for="drift-speed" class="block text-sm font-medium text-gray-700">Ocular Drift Speed ($\mu$)</label>
-            <input type="range" id="drift-speed" min="0" max="4" value="2" step="0.1" class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
+          <div id="control-drift-speed" data-hidden="true">
+            <label for="drift-speed" class="block text-sm font-medium text-gray-700">
+              Ocular Drift Speed (μ)
+            </label>
+            <input type="range" id="drift-speed" min="0" max="4" value="2" step="0.1"
+                   class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
             <span id="drift-speed-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 px/frame</span>
           </div>
 
-          <div id="control-noise-alpha" class="mt-4 hidden">
-            <label for="noise-alpha" class="block text-sm font-medium text-gray-700">Image Structure ($\alpha$)</label>
-            <input type="range" id="noise-alpha" min="0.5" max="3.0" value="2.0" step="0.1" class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
-            <span id="noise-alpha-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 (Natural scenes ≈ $1/f^2$)</span>
+          <div id="control-noise-alpha" class="mt-4" data-hidden="true">
+            <label for="noise-alpha" class="block text-sm font-medium text-gray-700">
+              Image Structure (α)
+            </label>
+            <input type="range" id="noise-alpha" min="0.5" max="3.0" value="2.0" step="0.1"
+                   class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
+            <span id="noise-alpha-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 (Natural scenes ≈ 1/f²)</span>
           </div>
 
-          <div id="control-diffusion-D" class="mt-4 hidden">
-            <label for="diffusion-d" class="block text-sm font-medium text-gray-700">Diffusion Constant ($D$)</label>
-            <input type="range" id="diffusion-d" min="0.1" max="20" value="5" step="0.1" class="w-full h-2 bg-purple-100 rounded-lg appearance-none cursor-pointer">
+          <div id="control-diffusion-D" class="mt-4" data-hidden="true">
+            <label for="diffusion-d" class="block text-sm font-medium text-gray-700">
+              Diffusion Constant (D)
+            </label>
+            <input type="range" id="diffusion-d" min="0.1" max="20" value="5" step="0.1"
+                   class="w-full h-2 bg-purple-100 rounded-lg appearance-none cursor-pointer">
             <span id="diffusion-d-value" class="text-sm font-mono text-gray-600 mt-1 block">5.0 (Larger D = more erratic motion)</span>
           </div>
 
@@ -85,1224 +109,651 @@
           </p>
         </div>
 
-        </div><!-- end sticky wrapper -->
-      </div>
+      </div><!-- end sticky wrapper -->
+    </div>
 
-      <!-- Right column -->
-      <div class="lg:col-span-2">
-        <div class="bg-white p-8 rounded-2xl shadow-xl min-h-[600px]">
-          <h2 id="content-title" class="text-3xl font-bold text-gray-900 mb-6">Start Here</h2>
+    <!-- ===== Right column ===== -->
+    <div class="lg:col-span-2">
+      <div class="bg-white p-8 rounded-2xl shadow-xl min-h-[600px]">
+        <h2 id="content-title" class="text-3xl font-bold text-gray-900 mb-6">Start Here</h2>
 
-          <div id="content-display" class="space-y-6 content-section text-lg text-gray-700">
-            <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg text-purple-800 flex items-center space-x-3">
-              <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-3.536a5 5 0 010-7.072m-2.121 7.072a8 8 0 010-11.314M12 4.573V4a1 1 0 011-1h2a1 1 0 011 1v.573m-6 3.14V7a1 1 0 011-1h2a1 1 0 011 1v.714m-4 1.847V9a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V11a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V13a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V15a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V17a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V19a1 1 0 011-1h2a1 1 0 011 1v.847"/></svg>
-              <div>
-                <h4 class="font-bold text-lg">Listen to the 5-Minute Walkthrough</h4>
-                <audio controls class="mt-2 w-full">
-                  <!-- Replace with your real audio URL -->
-                  <source src="https://example.com/your-5-minute-recording.mp3" type="audio/mp3"/>
-                  Your browser does not support the audio element.
-                </audio>
-                <p class="text-xs mt-1">Replace the <code>src</code> with a real MP3/WAV URL to enable the voiceover.</p>
-              </div>
+        <div id="content-display" class="space-y-6 content-section text-lg text-gray-700">
+          <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg text-purple-800 flex items-center space-x-3">
+            <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-3.536a5 5 0 010-7.072m-2.121 7.072a8 8 0 010-11.314"/>
+            </svg>
+            <div>
+              <h4 class="font-bold text-lg">Listen to the 5-Minute Walkthrough</h4>
+              <audio controls class="mt-2 w-full">
+                <source src="assets/draft_website_recording.m4a" type="audio/mp4" />
+                Your browser does not support the audio element.
+              </audio>
+              <!-- <p class="text-xs mt-1">Replace the <code>src</code> with a real MP3/WAV URL to enable the voiceover.</p> -->
             </div>
-
-            <p>Welcome to the interactive showcase of our work. Use the navigation steps on the left to move through the background, methods, and results.</p>
-            <p class="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
-              <b>Tip:</b> Click "1. Project Overview" to begin. Steps unlock progressively.
-            </p>
           </div>
+          <p>Welcome to the interactive showcase of our work. Use the navigation steps on the left to move through the background, methods, and results.</p>
+          <p class="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
+            <b>Tip:</b> Click "1. Project Overview" to begin. Steps unlock progressively.
+          </p>
+        </div>
 
-          <!-- Visualization panel -->
-          <div id="visualization-panel" class="mt-8 pt-6 border-t border-gray-200">
-            <h3 class="text-2xl font-bold text-indigo-600 mb-4">Core Visualization</h3>
-            <div id="visual-content" class="min-h-[250px] flex items-center justify-center bg-gray-100 rounded-xl p-4 transition-all duration-500">
-              <p class="text-gray-500 italic">Content visualization will appear here when you reach the core steps.</p>
-            </div>
+        <!-- Visualization panel -->
+        <div id="visualization-panel" class="mt-8 pt-6 border-t border-gray-200">
+          <h3 class="text-2xl font-bold text-indigo-600 mb-4">Core Visualization</h3>
+          <div id="visual-content"
+               class="min-h-[250px] flex items-center justify-center bg-gray-100 rounded-xl p-4 transition-all duration-500">
+            <p class="text-gray-500 italic">Content visualization will appear here when you reach the core steps.</p>
           </div>
         </div>
       </div>
     </div>
+
   </div>
+</div><!-- end max-w-7xl -->
 
-  <script>
-    // -------- Research Steps --------
-    const researchSteps = [
-      {
-        id: 1,
-        title: "Project Overview",
-        content: `
-          <p>
-            Vision begins with the encoding process in the retina. To understand how vision works at this earliest stage, we first need to understand the signal it receives.
-          </p>
-          <p>
-            That signal is not random. Natural scenes contain structured patterns across space and time, including edges, textures, and motion. At the same time, the eyes are constantly moving, which changes the image that falls on the retina from moment to moment.
-          </p>
-          <p>
-            This project asks what the retinal input looks like mathematically, and whether those input statistics can help explain why retinal neurons respond the way they do.
-          </p>
-          <p>
-            The central idea is that retinal organization can be studied as an efficient encoding problem: given the signal available at the retina, how should limited neural resources be allocated?
-          </p>
-          <div class="mt-6 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
-            <p class="font-semibold">This website walks through:</p>
-            <ol class="list-decimal list-inside mt-2 space-y-1 text-sm">
-              <li>Why efficient coding is useful for studying the retina</li>
-              <li>How natural visual input is structured</li>
-              <li>How ocular drift changes the signal at the retina</li>
-              <li>How an efficient coding model learns receptive fields from that input</li>
-              <li>What the results suggest about retinal organization</li>
-            </ol>
-          </div>
-        `,
-        isUnlocked: true,
-        visual: "Start"
-      },
-      {
-        id: 2,
-        title: "The Context: Efficient Coding",
-        content: `
-          <p>Vision begins at the retina, a highly constrained system set to process a complex world. We approach understanding the retina from a systems neuroscience perspective, where understanding neural function (the system) requires understanding the statistical properties of the signal it is designed to process. Our research is grounded in the <b>Efficient Coding Hypothesis</b>, which suggests that sensory neurons evolve to maximize information about their natural environment while minimizing biological costs.</p>
-          <p>The retina acts as a filter tuned to remove predictable structure, or <b>redundancy</b>, from the input signal.</p>
-          <div class="my-6 p-4 bg-indigo-50 rounded-lg flex flex-col items-center justify-center">
-            <img src="assets/spatial_whitening.png"
-                 loading="lazy"
-                 decoding="async"
-                 alt="Spatial whitening visualization"
-                 class="rounded-lg shadow-md max-w-full"
-                 onerror="this.onerror=null; this.src='https://placehold.co/600x300/f0f9ff/4f46e5?text=Spatial+Whitening+Image+Not+Found';" />
-            <p class="text-xs text-indigo-700 mt-2">Spatial whitening reduces predictable structure in natural images.</p>
-          </div>
-          <div class="flex items-center space-x-4 mt-6">
-            <span class="inline-block p-3 bg-indigo-100 rounded-full">
-              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </span>
-            <p class="text-sm text-gray-600">Nearby pixels are highly correlated (power falls as $1/f^2$), so low spatial frequencies dominate.</p>
-          </div>
-        `,
-        isUnlocked: true,
-        visual: "Start"
-      },
-      {
-        // FIX #1: was id:3 but setupControls checked stepId===2 for the simulation.
-        // Now the simulation step is id:3 and setupControls checks stepId===3.
-        id: 3,
-        title: "The Novel Input: Ocular Drift",
-        content: `
-          <p>The retinal input is not static. Tiny, involuntary eye movements—<b>ocular drift</b>—constantly shift the image, transforming input statistics.</p>
-          <div class="my-6 p-4 bg-blue-50 rounded-lg flex flex-col items-center justify-center">
-            <img src="brownian_example_14.gif"
-                 height="150"
-                 width="150"
-                 loading="lazy" decoding="async"
-                 alt="Ocular Drift Example GIF"
-                 class="rounded-lg shadow-md max-w-full"
-                 onerror="this.onerror=null; this.src='https://placehold.co/400x150/f0f9ff/3b82f6?text=GIF+Not+Found';"/>
-            <p class="text-xs text-blue-700 mt-2">Ocular drift example.</p>
-          </div>
-          <p class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded-lg">
-            <b>Interaction:</b> Watch the frames and the difference image below. The difference highlights <b>motion energy</b>, pushing power toward higher temporal frequencies. Use the sliders on the left.
-          </p>
-        `,
-        isUnlocked: false,
-        visual: "DriftSimulation"
-      },
-      {
-        // FIX #1 (continued): was id:4 but setupControls checked stepId===3 for trajectory.
-        // Now the trajectory step is id:4 and setupControls checks stepId===4.
-        id: 4,
-        title: "Drift Trajectory & Brownian Motion",
-        content: `
-          <p>Ocular drift is well-approximated as a <b>2D Brownian Motion</b> characterized by the <b>Diffusion Constant</b> $D$.</p>
-          <p class="mt-2">Larger $D$ means more volatile motion and broader coverage.</p>
-          <p class="p-3 bg-purple-50 border-l-4 border-purple-400 text-purple-800 rounded-lg mt-4">
-            <b>Interaction:</b> Adjust $D$ to see how volatility changes the trajectory (red path).
-          </p>
-        `,
-        isUnlocked: false,
-        visual: "TrajectoryDemo"
-      },
-      {
-        id: 5,
-        title: "The Model: Infomax Encoding",
-        content: `
-          <p>We trained a simple <b>Linear–Nonlinear (LN) Encoder</b> using an <b>Infomax</b> objective. RFs were learned under two inputs: (1) static natural movies and (2) natural movies with drift.</p>
-          <div class="mt-4 text-2xl font-mono text-indigo-700">
-            $$\\text{Maximize}\\; I(X;R) - \\lambda\\,\\text{Cost}(R)$$
-          </div>
-          <p class="mt-2 text-xs text-gray-500">Here, $X$ is the ocular drift sampled movie and $R$ the neural response.</p>
-        `,
-        isUnlocked: false,
-        visual: "Model"
-      },
-      {
-        id: 6,
-        title: "The Results: RF Transformation",
-        content: `
-          <p>With drift, optimal receptive fields change in two main ways:</p>
-          <ul class="list-disc list-inside space-y-1 ml-4 text-lg font-bold text-gray-800 mt-2">
-            <li>Temporal filters become <b>more bandpass</b>.</li>
-            <li>Spatial filters become <b>more lowpass</b>.</li>
-          </ul>
-          <p class="mt-4 text-gray-600">
-            The animations below summarize how receptive field structure changes across training and across ON/OFF populations.
-          </p>
-        `,
-        isUnlocked: false,
-        visual: "ResultsSummary"
-      },
-      {
-        id: 7,
-        title: "Conclusion & Future Work",
-        content: `
-          <p>Ocular drift is an <i>active transformer</i> of the input signal that retinal encoding must accommodate.</p>
-          <p class="mt-2 text-gray-600">Next: compare predictions to RGC recordings (whitening behavior, mosaics) for biological validation.</p>
-        `,
-        isUnlocked: false,
-        visual: "Start"
+<script>
+// =====================================================================
+//  Research Steps
+//  FIX #1: poster ("Start") visual is ONLY on step 1.
+//          Steps 2 and 7 now use "None" so they don't show the poster.
+// =====================================================================
+const researchSteps = [
+  {
+    id: 1,
+    title: "Project Overview",
+    content: `
+      <p>Vision begins with the encoding process in the retina. To understand how vision works at this earliest stage, we first need to understand the signal it receives.</p>
+      <p>That signal is not random. Natural scenes contain structured patterns across space and time, including edges, textures, and motion. At the same time, the eyes are constantly moving, which changes the image that falls on the retina from moment to moment.</p>
+      <p>This project asks what the retinal input looks like mathematically, and whether those input statistics can help explain why retinal neurons respond the way they do.</p>
+      <p>The central idea is that retinal organization can be studied as an efficient encoding problem: given the signal available at the retina, how should limited neural resources be allocated?</p>
+      <div class="mt-6 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
+        <p class="font-semibold">This website walks through:</p>
+        <ol class="list-decimal list-inside mt-2 space-y-1 text-sm">
+          <li>Why efficient coding is useful for studying the retina</li>
+          <li>How natural visual input is structured</li>
+          <li>How ocular drift changes the signal at the retina</li>
+          <li>How an efficient coding model learns receptive fields from that input</li>
+          <li>What the results suggest about retinal organization</li>
+        </ol>
+      </div>`,
+    isUnlocked: true,
+    visual: "Poster"   // ← only step 1 gets the poster
+  },
+  {
+    id: 2,
+    title: "The Context: Efficient Coding",
+    content: `
+      <p>Vision begins at the retina, a highly constrained system set to process a complex world. Our research is grounded in the <b>Efficient Coding Hypothesis</b>, which suggests that sensory neurons evolve to maximize information about their natural environment while minimizing biological costs.</p>
+      <p>The retina acts as a filter tuned to remove predictable structure, or <b>redundancy</b>, from the input signal.</p>
+      <div class="my-6 p-4 bg-indigo-50 rounded-lg flex flex-col items-center justify-center">
+        <img src="assets/spatial_whitening.png" loading="lazy" decoding="async"
+             alt="Spatial whitening visualization" class="rounded-lg shadow-md max-w-full"
+             onerror="this.onerror=null;this.src='https://placehold.co/600x300/f0f9ff/4f46e5?text=Spatial+Whitening+Image+Not+Found';" />
+        <p class="text-xs text-indigo-700 mt-2">Spatial whitening reduces predictable structure in natural images.</p>
+      </div>
+      <div class="flex items-center space-x-4 mt-6">
+        <span class="inline-block p-3 bg-indigo-100 rounded-full">
+          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </span>
+        <p class="text-sm text-gray-600">Nearby pixels are highly correlated (power falls as $1/f^2$), so low spatial frequencies dominate.</p>
+      </div>`,
+    isUnlocked: true,
+    visual: "None"   // ← no poster on step 2
+  },
+  {
+    id: 3,
+    title: "The Novel Input: Ocular Drift",
+    content: `
+      <p>The retinal input is not static. Tiny, involuntary eye movements—<b>ocular drift</b>—constantly shift the image, transforming input statistics.</p>
+      <div class="my-6 p-4 bg-blue-50 rounded-lg flex flex-col items-center justify-center">
+        <img data-src="brownian_example_14.gif" src="https://placehold.co/150x150/f0f9ff/3b82f6?text=Loading..."
+             height="150" width="150" loading="lazy" decoding="async"
+             alt="Ocular Drift Example GIF" class="rounded-lg shadow-md max-w-full gif-once"
+             onerror="this.onerror=null;this.src='https://placehold.co/400x150/f0f9ff/3b82f6?text=GIF+Not+Found';" />
+        <p class="text-xs text-blue-700 mt-2">Ocular drift example — plays once when visible.</p>
+      </div>
+      <p class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded-lg">
+        <b>Interaction:</b> Watch the frames and difference image below. Use the sliders on the left to control drift speed and image structure.
+      </p>`,
+    isUnlocked: false,
+    visual: "DriftSimulation"
+  },
+  {
+    id: 4,
+    title: "Drift Trajectory & Brownian Motion",
+    content: `
+      <p>Ocular drift is well-approximated as a <b>2D Brownian Motion</b> characterized by the <b>Diffusion Constant</b> $D$.</p>
+      <p class="mt-2">Larger $D$ means more volatile motion and broader coverage.</p>
+      <p class="p-3 bg-purple-50 border-l-4 border-purple-400 text-purple-800 rounded-lg mt-4">
+        <b>Interaction:</b> Adjust $D$ to see how volatility changes the trajectory (red path). This visualization loops continuously.
+      </p>`,
+    isUnlocked: false,
+    visual: "TrajectoryDemo"
+  },
+  {
+    id: 5,
+    title: "The Model: Infomax Encoding",
+    content: `
+      <p>We trained a simple <b>Linear–Nonlinear (LN) Encoder</b> using an <b>Infomax</b> objective. RFs were learned under two inputs: (1) static natural movies and (2) natural movies with drift.</p>
+      <div class="mt-4 text-2xl font-mono text-indigo-700">
+        $$\\text{Maximize}\\; I(X;R) - \\lambda\\,\\text{Cost}(R)$$
+      </div>
+      <p class="mt-2 text-xs text-gray-500">Here, $X$ is the ocular drift sampled movie and $R$ the neural response.</p>`,
+    isUnlocked: false,
+    visual: "Model"
+  },
+  {
+    id: 6,
+    title: "The Results: RF Transformation",
+    content: `
+      <p>With drift, optimal receptive fields change in two main ways:</p>
+      <ul class="list-disc list-inside space-y-1 ml-4 text-lg font-bold text-gray-800 mt-2">
+        <li>Temporal filters become <b>more bandpass</b>.</li>
+        <li>Spatial filters become <b>more lowpass</b>.</li>
+      </ul>
+      <p class="mt-4 text-gray-600">The animations below summarize how RF structure changes across training and across ON/OFF populations. Each GIF plays once when it scrolls into view.</p>`,
+    isUnlocked: false,
+    visual: "ResultsSummary"
+  },
+  {
+    id: 7,
+    title: "Conclusion & Future Work",
+    content: `
+      <p>Ocular drift is an <i>active transformer</i> of the input signal that retinal encoding must accommodate.</p>
+      <p class="mt-2 text-gray-600">Next: compare predictions to RGC recordings (whitening behavior, mosaics) for biological validation.</p>`,
+    isUnlocked: false,
+    visual: "None"   // ← no poster on step 7
+  }
+];
+
+// =====================================================================
+//  Global state
+// =====================================================================
+let currentStepId   = researchSteps[0].id;
+let animationFrameId  = null;
+let trajectoryFrameId = null;
+// FIX #2: track photosensitive preference (null = not yet asked)
+let photosensitiveMode = null;
+
+const CANVAS_SIZE      = 128;
+const TRAJ_CANVAS_SIZE = 256;
+const driftParams = { speed: 2.0, alpha: 2.0, shiftX: 0, shiftY: 0 };
+const trajectoryParams = {
+  D: 5.0, history: [], maxHistory: 500,
+  currentX: TRAJ_CANVAS_SIZE / 2, currentY: TRAJ_CANVAS_SIZE / 2
+};
+let noiseData    = new Float32Array(CANVAS_SIZE * CANVAS_SIZE);
+let lastFrameData = null;
+
+// =====================================================================
+//  FIX #5 helper: show/hide via data-hidden attribute (not Tailwind class)
+//  so MathJax's document-wide typesetPromise cannot reach inside them.
+// =====================================================================
+function show(el) { el.removeAttribute('data-hidden'); }
+function hide(el) { el.setAttribute('data-hidden', 'true'); }
+
+// =====================================================================
+//  Noise / canvas utilities
+// =====================================================================
+function generateStructuredNoise(size, alpha) {
+  const data = new Float32Array(size * size);
+  const octaves = 6;
+  let totalMax = 0;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let value = 0, amplitude = 1, maxAmp = 0;
+      for (let i = 0; i < octaves; i++) {
+        value    += (Math.random() * 2 - 1) * amplitude;
+        maxAmp   += amplitude;
+        amplitude /= Math.pow(2, alpha / 2);
       }
-    ];
-
-    // -------- Global state & params --------
-    let currentStepId = researchSteps[0].id;
-    let animationFrameId = null;
-    let trajectoryFrameId = null;
-
-    const CANVAS_SIZE = 128;
-    const TRAJ_CANVAS_SIZE = 256;
-
-    const driftParams = { speed: 2.0, alpha: 2.0, shiftX: 0, shiftY: 0 };
-    const trajectoryParams = {
-      D: 5.0, history: [], maxHistory: 500,
-      currentX: TRAJ_CANVAS_SIZE / 2, currentY: TRAJ_CANVAS_SIZE / 2
-    };
-
-    // Noise data for the drift simulation step
-    let noiseData = new Float32Array(CANVAS_SIZE * CANVAS_SIZE);
-    let lastFrameData = null;
-
-    // -------- Utilities --------
-
-    // FIX #6: helper to set up HiDPI canvas and return a scaled context
-    function setCanvasHiDPI(canvas, width, height) {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return ctx;
+      value /= maxAmp;
+      data[y * size + x] = value;
+      totalMax = Math.max(totalMax, Math.abs(value));
     }
+  }
+  for (let i = 0; i < data.length; i++) data[i] = (data[i] / totalMax + 1) / 2;
+  return data;
+}
 
-    function generateStructuredNoise(size, alpha) {
-      const data = new Float32Array(size * size);
-      const octaves = 6;
-      let totalMax = 0;
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          let value = 0, amplitude = 1, maxAmp = 0;
-          for (let i = 0; i < octaves; i++) {
-            value += (Math.random() * 2 - 1) * amplitude;
-            maxAmp += amplitude;
-            amplitude /= Math.pow(2, alpha / 2);
-          }
-          value /= maxAmp;
-          data[y * size + x] = value;
-          totalMax = Math.max(totalMax, Math.abs(value));
-        }
+function reinitializeNoise() {
+  const alpha = parseFloat(document.getElementById('noise-alpha').value);
+  noiseData     = generateStructuredNoise(CANVAS_SIZE, alpha);
+  lastFrameData = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
+}
+
+function drawFrame(ctx, size, frameData) {
+  const imageData = ctx.createImageData(size, size);
+  const d = imageData.data;
+  for (let i = 0; i < size * size; i++) {
+    const g = frameData[i] * 255, o = i * 4;
+    d[o] = g; d[o+1] = g; d[o+2] = g; d[o+3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function calculateCurrentFrame(size, data, shiftX, shiftY) {
+  const out  = new Float32Array(size * size);
+  const wrap = (v, m) => (v % m + m) % m;
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++)
+      out[y*size+x] = data[wrap(y - Math.floor(shiftY), size)*size + wrap(x - Math.floor(shiftX), size)];
+  return out;
+}
+
+function calculateTemporalDifference(size, curr, prev) {
+  const diff = new Float32Array(size * size);
+  let maxD = 0;
+  for (let i = 0; i < diff.length; i++) { diff[i] = Math.abs(curr[i] - prev[i]); maxD = Math.max(maxD, diff[i]); }
+  if (maxD > 0) for (let i = 0; i < diff.length; i++) diff[i] /= maxD;
+  return diff;
+}
+
+// =====================================================================
+//  Simulation loop — step 3 only
+// =====================================================================
+function simulationLoop() {
+  if (currentStepId !== 3) { animationFrameId = null; return; }
+
+  const speed = parseFloat(document.getElementById('drift-speed').value);
+  driftParams.shiftX += (Math.random() * speed - speed / 2) * 0.1;
+  driftParams.shiftY += (Math.random() * speed - speed / 2) * 0.1;
+
+  const alphaNow = parseFloat(document.getElementById('noise-alpha').value);
+  if (alphaNow !== driftParams.alpha) { driftParams.alpha = alphaNow; reinitializeNoise(); }
+
+  const curr = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
+  const cc   = document.getElementById('canvas-current');
+  const cd   = document.getElementById('canvas-diff');
+  if (cc && cd) {
+    if (!cc._bufReady) {
+      cc.width = cd.width = CANVAS_SIZE;
+      cc.height = cd.height = CANVAS_SIZE;
+      cc._bufReady = true;
+    }
+    drawFrame(cc.getContext('2d'), CANVAS_SIZE, curr);
+    if (lastFrameData) drawFrame(cd.getContext('2d'), CANVAS_SIZE, calculateTemporalDifference(CANVAS_SIZE, curr, lastFrameData));
+    lastFrameData = curr;
+  }
+  animationFrameId = requestAnimationFrame(simulationLoop);
+}
+
+// =====================================================================
+//  Trajectory loop — step 4, infinite loop (intentional)
+// =====================================================================
+function trajectoryLoop() {
+  if (currentStepId !== 4) { trajectoryFrameId = null; return; }
+  const canvas = document.getElementById('canvas-trajectory');
+  if (!canvas) { trajectoryFrameId = requestAnimationFrame(trajectoryLoop); return; }
+  if (!canvas._bufReady) {
+    canvas.width = canvas.height = TRAJ_CANVAS_SIZE;
+    canvas._bufReady = true;
+  }
+  const ctx  = canvas.getContext('2d');
+  const size = TRAJ_CANVAS_SIZE;
+  ctx.clearRect(0, 0, size, size);
+
+  const D        = parseFloat(document.getElementById('diffusion-d').value);
+  const variance = Math.sqrt(2 * D);
+  const randNorm = () => Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+  trajectoryParams.currentX = Math.min(size, Math.max(0, trajectoryParams.currentX + variance * randNorm() * 0.5));
+  trajectoryParams.currentY = Math.min(size, Math.max(0, trajectoryParams.currentY + variance * randNorm() * 0.5));
+  trajectoryParams.history.push({ x: trajectoryParams.currentX, y: trajectoryParams.currentY });
+  if (trajectoryParams.history.length > trajectoryParams.maxHistory) trajectoryParams.history.shift();
+
+  ctx.beginPath(); ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  for (let i = 1; i < trajectoryParams.history.length; i++) {
+    const a = (i / trajectoryParams.history.length) * 0.8 + 0.2;
+    ctx.strokeStyle = `rgba(239,68,68,${a})`;
+    ctx.moveTo(trajectoryParams.history[i-1].x, trajectoryParams.history[i-1].y);
+    ctx.lineTo(trajectoryParams.history[i].x, trajectoryParams.history[i].y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.arc(trajectoryParams.currentX, trajectoryParams.currentY, 4, 0, 2 * Math.PI);
+  ctx.fill();
+
+  trajectoryFrameId = requestAnimationFrame(trajectoryLoop);
+}
+
+function resetTrajectory() {
+  trajectoryParams.history  = [];
+  trajectoryParams.currentX = TRAJ_CANVAS_SIZE / 2;
+  trajectoryParams.currentY = TRAJ_CANVAS_SIZE / 2;
+  const c = document.getElementById('canvas-trajectory');
+  if (c) c.getContext('2d').clearRect(0, 0, TRAJ_CANVAS_SIZE, TRAJ_CANVAS_SIZE);
+}
+
+// =====================================================================
+//  FIX #4 — GIF play-once on scroll using IntersectionObserver
+//  GIFs use data-src; src starts as a placeholder.
+//  Observer fires once when element enters viewport, sets real src, then disconnects.
+//  Trajectory canvas is exempt (handled by rAF loop above).
+// =====================================================================
+function initGifObservers() {
+  const imgs = document.querySelectorAll('img[data-src]');
+  if (!imgs.length) return;
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        img.src = img.dataset.src;          // load gif — plays once from its own loop-count
+        obs.unobserve(img);                 // never restart
       }
-      for (let i = 0; i < data.length; i++) data[i] = (data[i] / totalMax + 1) / 2;
-      return data;
-    }
+    });
+  }, { threshold: 0.2 });
+  imgs.forEach(img => observer.observe(img));
+}
 
-    function reinitializeNoise() {
-      const alpha = parseFloat(document.getElementById('noise-alpha').value);
-      noiseData = generateStructuredNoise(CANVAS_SIZE, alpha);
-      lastFrameData = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
-    }
+// =====================================================================
+//  FIX #2 — Photosensitive warning for the drift simulation (step 3)
+// =====================================================================
+window.setPSMode = function(sensitive) {
+  photosensitiveMode = sensitive;
+  renderDriftVisual();
+};
 
-    function drawFrame(ctx, size, frameData) {
-      const imageData = ctx.createImageData(size, size);
-      const d = imageData.data;
-      for (let i = 0; i < size * size; i++) {
-        const g = frameData[i] * 255;
-        const o = i * 4;
-        d[o] = g; d[o + 1] = g; d[o + 2] = g; d[o + 3] = 255;
-      }
-      ctx.putImageData(imageData, 0, 0);
-    }
+function renderDriftVisual() {
+  const host = document.getElementById('visual-content');
 
-    function calculateCurrentFrame(size, data, shiftX, shiftY) {
-      const out = new Float32Array(size * size);
-      const wrap = (v, m) => (v % m + m) % m;
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const sx = wrap(x - Math.floor(shiftX), size);
-          const sy = wrap(y - Math.floor(shiftY), size);
-          out[y * size + x] = data[sy * size + sx];
-        }
-      }
-      return out;
-    }
+  // ---- Warning screen (not yet answered) ----
+  if (photosensitiveMode === null) {
+    host.innerHTML = `
+      <div class="w-full max-w-lg mx-auto text-center p-6 bg-amber-50 border-2 border-amber-400 rounded-2xl shadow-md space-y-4">
+        <div class="text-3xl">⚠️</div>
+        <h4 class="text-xl font-bold text-amber-800">Photosensitivity Notice</h4>
+        <p class="text-amber-900 text-sm leading-relaxed">
+          The visualization below contains a rapidly-changing animated canvas that simulates retinal input.
+          <br><br>
+          <b>Are you photosensitive or prone to discomfort from flashing/flickering visuals?</b>
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <button onclick="setPSMode(true)"
+                  class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition">
+            Yes — show me static frames instead
+          </button>
+          <button onclick="setPSMode(false)"
+                  class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition">
+            No — show the live animation
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
 
-    function calculateTemporalDifference(size, curr, prev) {
-      const diff = new Float32Array(size * size);
-      let maxD = 0;
-      for (let i = 0; i < diff.length; i++) {
-        const v = Math.abs(curr[i] - prev[i]);
-        diff[i] = v; maxD = Math.max(maxD, v);
-      }
-      if (maxD > 0) for (let i = 0; i < diff.length; i++) diff[i] /= maxD;
-      return diff;
-    }
-
-    // -------- Simulation (Step 3) --------
-    // FIX #1: guard now checks currentStepId === 3 (was === 2)
-    function simulationLoop() {
-      if (currentStepId !== 3) {
-        if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-        return;
-      }
-
-      const speed = parseFloat(document.getElementById('drift-speed').value);
-      driftParams.shiftX += (Math.random() * speed - speed / 2) * 0.1;
-      driftParams.shiftY += (Math.random() * speed - speed / 2) * 0.1;
-
-      const alphaNow = parseFloat(document.getElementById('noise-alpha').value);
-      if (alphaNow !== driftParams.alpha) {
-        driftParams.alpha = alphaNow;
-        reinitializeNoise();
-      }
-
-      const curr = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
-      const canvasCurrent = document.getElementById('canvas-current');
-      const canvasDiff = document.getElementById('canvas-diff');
-
-      if (canvasCurrent && canvasDiff) {
-        // Set internal buffer size once; CSS (width:100% / aspect-ratio) controls display size.
-        if (!canvasCurrent._bufReady) {
-          canvasCurrent.width  = CANVAS_SIZE;
-          canvasCurrent.height = CANVAS_SIZE;
-          canvasDiff.width     = CANVAS_SIZE;
-          canvasDiff.height    = CANVAS_SIZE;
-          canvasCurrent._bufReady = true;
-        }
-        const ctxC = canvasCurrent.getContext('2d');
-        const ctxD = canvasDiff.getContext('2d');
-        drawFrame(ctxC, CANVAS_SIZE, curr);
-        if (lastFrameData) {
-          const df = calculateTemporalDifference(CANVAS_SIZE, curr, lastFrameData);
-          drawFrame(ctxD, CANVAS_SIZE, df);
-        }
-        lastFrameData = curr;
-      }
-
-      animationFrameId = requestAnimationFrame(simulationLoop);
-    }
-
-    // -------- Trajectory (Step 4) --------
-    // FIX #1: guard now checks currentStepId === 4 (was === 3)
-    function trajectoryLoop() {
-      if (currentStepId !== 4) {
-        if (trajectoryFrameId !== null) cancelAnimationFrame(trajectoryFrameId);
-        trajectoryFrameId = null;
-        return;
-      }
-
-      const canvas = document.getElementById('canvas-trajectory');
-      if (!canvas) { trajectoryFrameId = requestAnimationFrame(trajectoryLoop); return; }
-
-      // Set internal buffer size once; CSS controls display size.
-      if (!canvas._bufReady) {
-        canvas.width  = TRAJ_CANVAS_SIZE;
-        canvas.height = TRAJ_CANVAS_SIZE;
-        canvas._bufReady = true;
-      }
-
-      const ctx = canvas.getContext('2d');
-      const size = TRAJ_CANVAS_SIZE;
-      ctx.clearRect(0, 0, size, size);
-
-      const D = parseFloat(document.getElementById('diffusion-d').value);
-      trajectoryParams.D = D;
-      const variance = Math.sqrt(2 * D);
-      const randNorm = () => Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
-      const stepX = variance * randNorm() * 0.5;
-      const stepY = variance * randNorm() * 0.5;
-
-      trajectoryParams.currentX = Math.min(size, Math.max(0, trajectoryParams.currentX + stepX));
-      trajectoryParams.currentY = Math.min(size, Math.max(0, trajectoryParams.currentY + stepY));
-
-      trajectoryParams.history.push({ x: trajectoryParams.currentX, y: trajectoryParams.currentY });
-      if (trajectoryParams.history.length > trajectoryParams.maxHistory) trajectoryParams.history.shift();
-
-      ctx.beginPath(); ctx.lineWidth = 2; ctx.lineJoin = 'round';
-      for (let i = 1; i < trajectoryParams.history.length; i++) {
-        const a = (i / trajectoryParams.history.length) * 0.8 + 0.2;
-        ctx.strokeStyle = `rgba(239, 68, 68, ${a})`;
-        ctx.moveTo(trajectoryParams.history[i - 1].x, trajectoryParams.history[i - 1].y);
-        ctx.lineTo(trajectoryParams.history[i].x, trajectoryParams.history[i].y);
-      }
-      ctx.stroke();
-
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(trajectoryParams.currentX, trajectoryParams.currentY, 4, 0, 2 * Math.PI);
-      ctx.fill();
-
-      trajectoryFrameId = requestAnimationFrame(trajectoryLoop);
-    }
-
-    function resetTrajectory() {
-      trajectoryParams.history = [];
-      trajectoryParams.currentX = TRAJ_CANVAS_SIZE / 2;
-      trajectoryParams.currentY = TRAJ_CANVAS_SIZE / 2;
-      const canvas = document.getElementById('canvas-trajectory');
-      if (canvas) canvas.getContext('2d').clearRect(0, 0, TRAJ_CANVAS_SIZE, TRAJ_CANVAS_SIZE);
-    }
-
-    // -------- UI wiring --------
-    function renderNavigation() {
-      const nav = document.getElementById('nav-buttons');
-      nav.innerHTML = researchSteps.map(step => {
-        const isCurrent = step.id === currentStepId;
-        const isEnabled = step.isUnlocked;
-        let cls = 'nav-button px-4 py-3 rounded-xl w-full text-left font-semibold text-base transition-all duration-300 flex items-center';
-        if (isCurrent) cls += ' bg-indigo-600 text-white transform scale-105';
-        else if (isEnabled) cls += ' bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700';
-        else cls += ' bg-gray-50 text-gray-400 opacity-60';
-        return `<button id="nav-step-${step.id}" class="${cls}" data-step-id="${step.id}" ${!isEnabled ? 'disabled' : ''}><span class="mr-3 font-extrabold">${step.id}.</span>${step.title}</button>`;
-      }).join('');
-
-      nav.querySelectorAll('button').forEach(b => {
-        b.addEventListener('click', e => {
-          const id = parseInt(e.currentTarget.dataset.stepId);
-          if (researchSteps.find(s => s.id === id).isUnlocked) goToStep(id);
-        });
-      });
-    }
-
-    function goToStep(stepId) {
-      const newStep = researchSteps.find(s => s.id === stepId);
-      if (!newStep) return;
-
-      const nxt = researchSteps.find(s => s.id === stepId + 1);
-      if (nxt) nxt.isUnlocked = true; // progressive unlock
-
-      currentStepId = stepId;
-
-      const titleEl = document.getElementById('content-title');
-      const dispEl = document.getElementById('content-display');
-
-      // FIX #7: use rAF instead of void offsetWidth for more reliable animation restart
-      dispEl.classList.remove('content-section');
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          dispEl.classList.add('content-section');
-        });
-      });
-
-      titleEl.textContent = newStep.title;
-      dispEl.innerHTML = newStep.content;
-
-      renderVisualization(newStep.visual);
-      updateControlLabels();
-      setupControls(stepId);
-      renderNavigation();
-
-      if (window.MathJax) MathJax.typesetPromise?.();
-    }
-
-    function setupControls(stepId) {
-      const controls = document.getElementById('simulation-controls');
-      const speedC   = document.getElementById('control-drift-speed');
-      const alphaC   = document.getElementById('control-noise-alpha');
-      const diffC    = document.getElementById('control-diffusion-D');
-      const tip      = document.getElementById('control-tip');
-
-      controls.classList.add('hidden');
-      speedC.classList.add('hidden');
-      alphaC.classList.add('hidden');
-      diffC.classList.add('hidden');
-
-      if (animationFrameId)    { cancelAnimationFrame(animationFrameId);    animationFrameId    = null; }
-      if (trajectoryFrameId)   { cancelAnimationFrame(trajectoryFrameId);   trajectoryFrameId   = null; }
-
-      // FIX #1: stepId 3 → drift simulation, stepId 4 → trajectory (was 2 and 3)
-      if (stepId === 3) {
-        controls.classList.remove('hidden');
-        speedC.classList.remove('hidden');
-        alphaC.classList.remove('hidden');
-        tip.textContent = "Adjust these sliders to see how the resulting Temporal Difference changes.";
-        reinitializeNoise();
-        simulationLoop();
-      } else if (stepId === 4) {
-        controls.classList.remove('hidden');
-        diffC.classList.remove('hidden');
-        tip.textContent = "Observe how the Diffusion Constant (D) affects the volatility of the trajectory.";
-        resetTrajectory();
-        trajectoryLoop();
-      }
-    }
-
-    // FIX #5: attach live input listeners so labels update while dragging
-    function attachSliderListeners() {
-      document.getElementById('drift-speed').addEventListener('input', updateControlLabels);
-      document.getElementById('noise-alpha').addEventListener('input', updateControlLabels);
-      document.getElementById('diffusion-d').addEventListener('input', updateControlLabels);
-    }
-
-    function updateControlLabels() {
-      const s = document.getElementById('drift-speed');
-      if (s) document.getElementById('drift-speed-value').textContent = `${parseFloat(s.value).toFixed(1)} px/frame`;
-
-      const a = document.getElementById('noise-alpha');
-      if (a) document.getElementById('noise-alpha-value').textContent = `${parseFloat(a.value).toFixed(1)} (Natural scenes ≈ 1/f^2 at 2.0)`;
-
-      const d = document.getElementById('diffusion-d');
-      if (d) document.getElementById('diffusion-d-value').textContent = `${parseFloat(d.value).toFixed(1)} (Larger D = more erratic motion)`;
-    }
-
-    function renderVisualization(kind) {
-      const host = document.getElementById('visual-content');
-
-      const simHTML = `
-        <div class="space-y-4 w-full">
-          <p class="text-gray-600 text-center text-sm">Live simulation of $1/f^{\\alpha}$ input (left) and Temporal Difference (right).</p>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="flex flex-col items-center">
-              <h4 class="font-semibold text-lg text-gray-800 mb-2">Current Retinal Input</h4>
-              <canvas id="canvas-current" class="sim-canvas border-2 border-indigo-300"></canvas>
-            </div>
-            <div class="flex flex-col items-center">
-              <h4 class="font-semibold text-lg text-gray-800 mb-2 text-red-600">Temporal Difference ($\\Delta t$)</h4>
-              <canvas id="canvas-diff" class="sim-canvas border-2 border-red-300"></canvas>
-            </div>
-          </div>
-          <p class="text-xs text-gray-500 text-center pt-2">The difference image highlights motion energy introduced by drift.</p>
-        </div>`;
-
-      const trajHTML = `
-        <div class="space-y-4 w-full text-center">
-          <h4 class="font-semibold text-lg text-gray-800 mb-2">Brownian Motion Trajectory ($D$)</h4>
-          <canvas id="canvas-trajectory" class="mx-auto sim-canvas"></canvas>
-          <p class="text-xs text-gray-500 pt-2">The red line shows the foveal path over a scene; $D$ controls volatility.</p>
-        </div>`;
-
-      const resultsHTML = `
-        <div class="w-full text-center p-4">
-          <p class="text-2xl font-bold mb-4 text-red-700">Model Prediction: RF Transformation</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-6">
-            <div class="p-4 bg-red-100 rounded-lg shadow-md">
-              <h5 class="font-extrabold text-xl text-red-700">Temporal Selectivity $\\uparrow$</h5>
-              <p class="text-sm text-gray-700">Filters shift toward <b>bandpass</b> to encode higher temporal frequencies.</p>
-            </div>
-            <div class="p-4 bg-blue-100 rounded-lg shadow-md">
-              <h5 class="font-extrabold text-xl text-blue-700">Spatial Selectivity $\\downarrow$</h5>
-              <p class="text-sm text-gray-700">Filters become <b>more lowpass</b>, trading fine spatial detail for temporal precision.</p>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-              <h5 class="font-bold text-gray-900 mb-2">Receptive Field Evolution</h5>
-              <img src="assets/weights_evolution_video0.gif"
-                   loading="lazy" decoding="async"
-                   alt="Animation showing receptive field weights evolving during training"
-                   class="rounded-lg shadow-sm max-w-full mx-auto"
-                   onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Weights+Evolution+GIF+Not+Found';" />
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-                <h5 class="font-bold text-gray-900 mb-2">ON Cell Contours</h5>
-                <img src="assets/contours_ON_0.gif"
-                     loading="lazy" decoding="async"
-                     alt="Animation showing ON receptive field contours"
-                     class="rounded-lg shadow-sm max-w-full mx-auto"
-                     onerror="this.onerror=null; this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=ON+Contours+GIF+Not+Found';" />
+  // ---- Photosensitive: static comparison frames ----
+  if (photosensitiveMode === true) {
+    host.innerHTML = `
+      <div class="space-y-4 w-full">
+        <p class="text-center text-sm text-gray-600 font-medium">
+          Static frame comparison — three moments in time showing retinal input and temporal difference.
+        </p>
+        <div class="grid grid-cols-3 gap-3">
+          ${[1,2,3].map(n => `
+            <div class="flex flex-col items-center gap-2">
+              <span class="text-xs font-semibold text-gray-500">Frame ${n}</span>
+              <div class="w-full aspect-square bg-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-xs border-2 border-indigo-200">
+                Retinal input t=${n}
               </div>
-              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-                <h5 class="font-bold text-gray-900 mb-2">OFF Cell Contours</h5>
-                <img src="assets/contours_OFF_0.gif"
-                     loading="lazy" decoding="async"
-                     alt="Animation showing OFF receptive field contours"
-                     class="rounded-lg shadow-sm max-w-full mx-auto"
-                     onerror="this.onerror=null; this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=OFF+Contours+GIF+Not+Found';" />
+              <div class="w-full aspect-square bg-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-xs border-2 border-red-200">
+                Δ at t=${n}
               </div>
-            </div>
-          </div>
-        </div>`;
+            </div>`).join('')}
+        </div>
+        <p class="text-xs text-gray-400 text-center">Replace placeholders with real exported frames from your simulation.</p>
+        <div class="text-center">
+          <button onclick="setPSMode(null)"
+                  class="mt-2 text-xs text-indigo-500 hover:underline">← Back to preference screen</button>
+        </div>
+      </div>`;
+    return;
+  }
 
-      const modelHTML = `
-        <div class="w-full text-center p-2">
-          <h4 class="text-xl font-bold text-gray-900 mb-3">Model Architecture</h4>
-          <img src="assets/single_slide_model_architecture.gif"
-               loading="lazy" decoding="async"
-               alt="Animation showing the model architecture"
-               class="rounded-lg shadow-md max-w-5xl mx-auto"
-               onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Model+Architecture+GIF+Not+Found';" />
-          <!-- FIX #3: was "mx auto" (missing hyphen), corrected to "mx-auto" -->
-          <p class="mt-4 text-xs text-gray-500 max-w-4xl mx-auto">
-            Efficient coding model architecture used to learn receptive fields from noisy, drift-transformed inputs.
-            A natural image is sampled along a Brownian motion trajectory to simulate ocular drift.
-            The resulting drift movie is corrupted with Gaussian input noise to form a sensory-degraded signal.
-            This signal is passed through learned spatial and temporal weights, followed by a Softmax nonlinearity.
-            The response is then corrupted with Gaussian channel noise to produce the final noisy neural response.
-          </p>
-        </div>`;
-
-      // FIX #4: completed the truncated default case with the poster iframe
-      const defaultHTML = `
-        <a href="assets/SFN_poster_dennisPerez.pdf"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="block w-full text-center group">
-          <p class="text-sm font-semibold text-indigo-700 mb-4">
-            To see the full project end-to-end poster, click this image.
-          </p>
-          <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4 transition group-hover:shadow-xl group-hover:scale-[1.01]">
-            <iframe
-              src="assets/SFN_poster_dennisPerez.pdf"
-              class="w-full rounded-lg pointer-events-none"
-              style="height: 400px;"
-              title="SFN Poster Preview">
-            </iframe>
-          </div>
-        </a>`;
-
-      switch (kind) {
-        case "DriftSimulation":  host.innerHTML = simHTML;      break;
-        case "TrajectoryDemo":   host.innerHTML = trajHTML;     break;
-        case "ResultsSummary":   host.innerHTML = resultsHTML;  break;
-        case "Model":            host.innerHTML = modelHTML;    break;
-        default:                 host.innerHTML = defaultHTML;  break;
-      }
-    }
-
-    // -------- Boot --------
-    renderNavigation();
-    attachSliderListeners(); // FIX #5: wire up slider → label updates
-    goToStep(researchSteps[0].id);
-  </script>
-</body>
-</html>            <label for="drift-speed" class="block text-sm font-medium text-gray-700">Ocular Drift Speed ($\mu$)</label>
-            <input type="range" id="drift-speed" min="0" max="4" value="2" step="0.1" class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
-            <span id="drift-speed-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 px/frame</span>
-          </div>
-
-          <div id="control-noise-alpha" class="mt-4 hidden">
-            <label for="noise-alpha" class="block text-sm font-medium text-gray-700">Image Structure ($\alpha$)</label>
-            <input type="range" id="noise-alpha" min="0.5" max="3.0" value="2.0" step="0.1" class="w-full h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer">
-            <span id="noise-alpha-value" class="text-sm font-mono text-gray-600 mt-1 block">2.0 (Natural scenes ≈ $1/f^2$)</span>
-          </div>
-
-          <div id="control-diffusion-D" class="mt-4 hidden">
-            <label for="diffusion-d" class="block text-sm font-medium text-gray-700">Diffusion Constant ($D$)</label>
-            <input type="range" id="diffusion-d" min="0.1" max="20" value="5" step="0.1" class="w-full h-2 bg-purple-100 rounded-lg appearance-none cursor-pointer">
-            <span id="diffusion-d-value" class="text-sm font-mono text-gray-600 mt-1 block">5.0 (Larger D = more erratic motion)</span>
-          </div>
-
-          <p id="control-tip" class="text-xs text-gray-500 mt-4 p-2 bg-yellow-50 rounded">
-            Adjust these sliders to see how the resulting <b>Temporal Difference</b> changes.
-          </p>
+  // ---- Normal: live canvas simulation ----
+  host.innerHTML = `
+    <div class="space-y-4 w-full">
+      <p class="text-gray-600 text-center text-sm">Live simulation of $1/f^{\\alpha}$ input (left) and Temporal Difference (right).</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col items-center">
+          <h4 class="font-semibold text-lg text-gray-800 mb-2">Current Retinal Input</h4>
+          <canvas id="canvas-current" class="sim-canvas border-2 border-indigo-300"></canvas>
+        </div>
+        <div class="flex flex-col items-center">
+          <h4 class="font-semibold text-lg text-gray-800 mb-2 text-red-600">Temporal Difference (Δt)</h4>
+          <canvas id="canvas-diff" class="sim-canvas border-2 border-red-300"></canvas>
         </div>
       </div>
+      <p class="text-xs text-gray-500 text-center pt-2">The difference image highlights motion energy introduced by drift.</p>
+      <div class="text-center">
+        <button onclick="setPSMode(null)"
+                class="mt-1 text-xs text-indigo-500 hover:underline">← Back to preference screen</button>
+      </div>
+    </div>`;
 
-      <!-- Right column -->
-      <div class="lg:col-span-2">
-        <div class="bg-white p-8 rounded-2xl shadow-xl min-h-[600px]">
-          <h2 id="content-title" class="text-3xl font-bold text-gray-900 mb-6">Start Here</h2>
+  // start the animation now that the canvases exist
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  reinitializeNoise();
+  simulationLoop();
+}
 
-          <div id="content-display" class="space-y-6 content-section text-lg text-gray-700">
-            <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg text-purple-800 flex items-center space-x-3">
-              <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-3.536a5 5 0 010-7.072m-2.121 7.072a8 8 0 010-11.314M12 4.573V4a1 1 0 011-1h2a1 1 0 011 1v.573m-6 3.14V7a1 1 0 011-1h2a1 1 0 011 1v.714m-4 1.847V9a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V11a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V13a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V15a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V17a1 1 0 011-1h2a1 1 0 011 1v.847m-4 1.847V19a1 1 0 011-1h2a1 1 0 011 1v.847"/></svg>
-              <div>
-                <h4 class="font-bold text-lg">Listen to the 5-Minute Walkthrough</h4>
-                <audio controls class="mt-2 w-full">
-                  <!-- Replace with your real audio URL -->
-                  <source src="https://example.com/your-5-minute-recording.mp3" type="audio/mp3"/>
-                  Your browser does not support the audio element.
-                </audio>
-                <p class="text-xs mt-1">Replace the <code>src</code> with a real MP3/WAV URL to enable the voiceover.</p>
-              </div>
-            </div>
+// =====================================================================
+//  renderVisualization — dispatches to the right HTML block
+// =====================================================================
+function renderVisualization(kind, stepId) {
+  const host = document.getElementById('visual-content');
 
-            <p>Welcome to the interactive showcase of our work. Use the navigation steps on the left to move through the background, methods, and results.</p>
-            <p class="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
-              <b>Tip:</b> Click "1. Project Overview" to begin. Steps unlock progressively.
-            </p>
+  // ---- FIX #3: model gif constrained to max-w-xl with white bg to prevent black flicker ----
+  const modelHTML = `
+    <div class="w-full text-center p-2">
+      <h4 class="text-xl font-bold text-gray-900 mb-3">Model Architecture</h4>
+      <div class="bg-white rounded-xl p-2 inline-block max-w-xl w-full mx-auto shadow-md border border-gray-200">
+        <img data-src="assets/single_slide_model_architecture.gif"
+             src="https://placehold.co/600x300/ffffff/4f46e5?text=Loading+architecture..."
+             loading="lazy" decoding="async"
+             alt="Animation showing the model architecture"
+             class="rounded-lg w-full gif-once"
+             onerror="this.onerror=null;this.src='https://placehold.co/600x300/f3f4f6/4f46e5?text=Model+Architecture+GIF+Not+Found';" />
+      </div>
+      <p class="mt-4 text-xs text-gray-500 max-w-2xl mx-auto">
+        Efficient coding model architecture used to learn receptive fields from noisy, drift-transformed inputs.
+        A natural image is sampled along a Brownian motion trajectory to simulate ocular drift.
+        The resulting drift movie is corrupted with Gaussian input noise.
+        This signal passes through learned spatial and temporal weights (Softmax nonlinearity),
+        then Gaussian channel noise produces the final noisy neural response.
+      </p>
+    </div>`;
+
+  // ---- FIX #4: results GIFs use data-src so they play once on scroll ----
+  const resultsHTML = `
+    <div class="w-full text-center p-4">
+      <p class="text-2xl font-bold mb-4 text-red-700">Model Prediction: RF Transformation</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-6">
+        <div class="p-4 bg-red-100 rounded-lg shadow-md">
+          <h5 class="font-extrabold text-xl text-red-700">Temporal Selectivity ↑</h5>
+          <p class="text-sm text-gray-700">Filters shift toward <b>bandpass</b> to encode higher temporal frequencies.</p>
+        </div>
+        <div class="p-4 bg-blue-100 rounded-lg shadow-md">
+          <h5 class="font-extrabold text-xl text-blue-700">Spatial Selectivity ↓</h5>
+          <p class="text-sm text-gray-700">Filters become <b>more lowpass</b>, trading fine spatial detail for temporal precision.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
+        <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+          <h5 class="font-bold text-gray-900 mb-2">Receptive Field Evolution</h5>
+          <img data-src="assets/weights_evolution_video0.gif"
+               src="https://placehold.co/700x350/ffffff/4f46e5?text=Scroll+to+load..."
+               loading="lazy" decoding="async"
+               alt="Receptive field weights evolving during training"
+               class="rounded-lg shadow-sm max-w-full mx-auto gif-once"
+               onerror="this.onerror=null;this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Weights+Evolution+GIF+Not+Found';" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+            <h5 class="font-bold text-gray-900 mb-2">ON Cell Contours</h5>
+            <img data-src="assets/contours_ON_0.gif"
+                 src="https://placehold.co/350x250/ffffff/4f46e5?text=Scroll+to+load..."
+                 loading="lazy" decoding="async"
+                 alt="ON receptive field contours"
+                 class="rounded-lg shadow-sm max-w-full mx-auto gif-once"
+                 onerror="this.onerror=null;this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=ON+Contours+GIF+Not+Found';" />
           </div>
-
-          <!-- Visualization panel -->
-          <div id="visualization-panel" class="mt-8 pt-6 border-t border-gray-200">
-            <h3 class="text-2xl font-bold text-indigo-600 mb-4">Core Visualization</h3>
-            <div id="visual-content" class="min-h-[250px] flex items-center justify-center bg-gray-100 rounded-xl p-4 transition-all duration-500">
-              <p class="text-gray-500 italic">Content visualization will appear here when you reach the core steps.</p>
-            </div>
+          <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+            <h5 class="font-bold text-gray-900 mb-2">OFF Cell Contours</h5>
+            <img data-src="assets/contours_OFF_0.gif"
+                 src="https://placehold.co/350x250/ffffff/4f46e5?text=Scroll+to+load..."
+                 loading="lazy" decoding="async"
+                 alt="OFF receptive field contours"
+                 class="rounded-lg shadow-sm max-w-full mx-auto gif-once"
+                 onerror="this.onerror=null;this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=OFF+Contours+GIF+Not+Found';" />
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </div>`;
 
-  <script>
-    // -------- Research Steps --------
-    const researchSteps = [
-      {
-        id: 1,
-        title: "Project Overview",
-        content: `
-          <p>
-            Vision begins with the encoding process in the retina. To understand how vision works at this earliest stage, we first need to understand the signal it receives.
-          </p>
-          <p>
-            That signal is not random. Natural scenes contain structured patterns across space and time, including edges, textures, and motion. At the same time, the eyes are constantly moving, which changes the image that falls on the retina from moment to moment.
-          </p>
-          <p>
-            This project asks what the retinal input looks like mathematically, and whether those input statistics can help explain why retinal neurons respond the way they do.
-          </p>
-          <p>
-            The central idea is that retinal organization can be studied as an efficient encoding problem: given the signal available at the retina, how should limited neural resources be allocated?
-          </p>
-          <div class="mt-6 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
-            <p class="font-semibold">This website walks through:</p>
-            <ol class="list-decimal list-inside mt-2 space-y-1 text-sm">
-              <li>Why efficient coding is useful for studying the retina</li>
-              <li>How natural visual input is structured</li>
-              <li>How ocular drift changes the signal at the retina</li>
-              <li>How an efficient coding model learns receptive fields from that input</li>
-              <li>What the results suggest about retinal organization</li>
-            </ol>
-          </div>
-        `,
-        isUnlocked: true,
-        visual: "Start"
-      },
-      {
-        id: 2,
-        title: "The Context: Efficient Coding",
-        content: `
-          <p>Vision begins at the retina, a highly constrained system set to process a complex world. We approach understanding the retina from a systems neuroscience perspective, where understanding neural function (the system) requires understanding the statistical properties of the signal it is designed to process. Our research is grounded in the <b>Efficient Coding Hypothesis</b>, which suggests that sensory neurons evolve to maximize information about their natural environment while minimizing biological costs.</p>
-          <p>The retina acts as a filter tuned to remove predictable structure, or <b>redundancy</b>, from the input signal.</p>
-          <div class="my-6 p-4 bg-indigo-50 rounded-lg flex flex-col items-center justify-center">
-            <img src="assets/spatial_whitening.png"
-                 loading="lazy"
-                 decoding="async"
-                 alt="Spatial whitening visualization"
-                 class="rounded-lg shadow-md max-w-full"
-                 onerror="this.onerror=null; this.src='https://placehold.co/600x300/f0f9ff/4f46e5?text=Spatial+Whitening+Image+Not+Found';" />
-            <p class="text-xs text-indigo-700 mt-2">Spatial whitening reduces predictable structure in natural images.</p>
-          </div>
-          <div class="flex items-center space-x-4 mt-6">
-            <span class="inline-block p-3 bg-indigo-100 rounded-full">
-              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </span>
-            <p class="text-sm text-gray-600">Nearby pixels are highly correlated (power falls as $1/f^2$), so low spatial frequencies dominate.</p>
-          </div>
-        `,
-        isUnlocked: true,
-        visual: "Start"
-      },
-      {
-        // FIX #1: was id:3 but setupControls checked stepId===2 for the simulation.
-        // Now the simulation step is id:3 and setupControls checks stepId===3.
-        id: 3,
-        title: "The Novel Input: Ocular Drift",
-        content: `
-          <p>The retinal input is not static. Tiny, involuntary eye movements—<b>ocular drift</b>—constantly shift the image, transforming input statistics.</p>
-          <div class="my-6 p-4 bg-blue-50 rounded-lg flex flex-col items-center justify-center">
-            <img src="brownian_example_14.gif"
-                 height="150"
-                 width="150"
-                 loading="lazy" decoding="async"
-                 alt="Ocular Drift Example GIF"
-                 class="rounded-lg shadow-md max-w-full"
-                 onerror="this.onerror=null; this.src='https://placehold.co/400x150/f0f9ff/3b82f6?text=GIF+Not+Found';"/>
-            <p class="text-xs text-blue-700 mt-2">Ocular drift example.</p>
-          </div>
-          <p class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded-lg">
-            <b>Interaction:</b> Watch the frames and the difference image below. The difference highlights <b>motion energy</b>, pushing power toward higher temporal frequencies. Use the sliders on the left.
-          </p>
-        `,
-        isUnlocked: false,
-        visual: "DriftSimulation"
-      },
-      {
-        // FIX #1 (continued): was id:4 but setupControls checked stepId===3 for trajectory.
-        // Now the trajectory step is id:4 and setupControls checks stepId===4.
-        id: 4,
-        title: "Drift Trajectory & Brownian Motion",
-        content: `
-          <p>Ocular drift is well-approximated as a <b>2D Brownian Motion</b> characterized by the <b>Diffusion Constant</b> $D$.</p>
-          <p class="mt-2">Larger $D$ means more volatile motion and broader coverage.</p>
-          <p class="p-3 bg-purple-50 border-l-4 border-purple-400 text-purple-800 rounded-lg mt-4">
-            <b>Interaction:</b> Adjust $D$ to see how volatility changes the trajectory (red path).
-          </p>
-        `,
-        isUnlocked: false,
-        visual: "TrajectoryDemo"
-      },
-      {
-        id: 5,
-        title: "The Model: Infomax Encoding",
-        content: `
-          <p>We trained a simple <b>Linear–Nonlinear (LN) Encoder</b> using an <b>Infomax</b> objective. RFs were learned under two inputs: (1) static natural movies and (2) natural movies with drift.</p>
-          <div class="mt-4 text-2xl font-mono text-indigo-700">
-            $$\\text{Maximize}\\; I(X;R) - \\lambda\\,\\text{Cost}(R)$$
-          </div>
-          <p class="mt-2 text-xs text-gray-500">Here, $X$ is the ocular drift sampled movie and $R$ the neural response.</p>
-        `,
-        isUnlocked: false,
-        visual: "Model"
-      },
-      {
-        id: 6,
-        title: "The Results: RF Transformation",
-        content: `
-          <p>With drift, optimal receptive fields change in two main ways:</p>
-          <ul class="list-disc list-inside space-y-1 ml-4 text-lg font-bold text-gray-800 mt-2">
-            <li>Temporal filters become <b>more bandpass</b>.</li>
-            <li>Spatial filters become <b>more lowpass</b>.</li>
-          </ul>
-          <p class="mt-4 text-gray-600">
-            The animations below summarize how receptive field structure changes across training and across ON/OFF populations.
-          </p>
-        `,
-        isUnlocked: false,
-        visual: "ResultsSummary"
-      },
-      {
-        id: 7,
-        title: "Conclusion & Future Work",
-        content: `
-          <p>Ocular drift is an <i>active transformer</i> of the input signal that retinal encoding must accommodate.</p>
-          <p class="mt-2 text-gray-600">Next: compare predictions to RGC recordings (whitening behavior, mosaics) for biological validation.</p>
-        `,
-        isUnlocked: false,
-        visual: "Start"
-      }
-    ];
+  const trajHTML = `
+    <div class="space-y-4 w-full text-center">
+      <h4 class="font-semibold text-lg text-gray-800 mb-2">Brownian Motion Trajectory (D) — loops continuously</h4>
+      <canvas id="canvas-trajectory" class="mx-auto sim-canvas"></canvas>
+      <p class="text-xs text-gray-500 pt-2">The red line shows the foveal path; D controls volatility.</p>
+    </div>`;
 
-    // -------- Global state & params --------
-    let currentStepId = researchSteps[0].id;
-    let animationFrameId = null;
-    let trajectoryFrameId = null;
+  // ---- FIX #1: poster only shown for "Poster" kind ----
+  const posterHTML = `
+    <a href="assets/SFN_poster_dennisPerez.pdf" target="_blank" rel="noopener noreferrer"
+       class="block w-full text-center group">
+      <p class="text-sm font-semibold text-indigo-700 mb-4">Click to open the full project poster (PDF).</p>
+      <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4 transition group-hover:shadow-xl group-hover:scale-[1.01]">
+        <iframe src="assets/SFN_poster_dennisPerez.pdf"
+                class="w-full rounded-lg pointer-events-none" style="height:400px;"
+                title="SFN Poster Preview"></iframe>
+      </div>
+    </a>`;
 
-    const CANVAS_SIZE = 128;
-    const TRAJ_CANVAS_SIZE = 256;
+  const noneHTML = `<p class="text-gray-400 italic text-sm">No additional visualization for this step.</p>`;
 
-    const driftParams = { speed: 2.0, alpha: 2.0, shiftX: 0, shiftY: 0 };
-    const trajectoryParams = {
-      D: 5.0, history: [], maxHistory: 500,
-      currentX: TRAJ_CANVAS_SIZE / 2, currentY: TRAJ_CANVAS_SIZE / 2
-    };
+  switch (kind) {
+    case "Poster":          host.innerHTML = posterHTML;    break;
+    case "DriftSimulation": renderDriftVisual();            return; // handles its own innerHTML
+    case "TrajectoryDemo":  host.innerHTML = trajHTML;      break;
+    case "ResultsSummary":  host.innerHTML = resultsHTML;   break;
+    case "Model":           host.innerHTML = modelHTML;     break;
+    default:                host.innerHTML = noneHTML;      break;
+  }
 
-    // Noise data for the drift simulation step
-    let noiseData = new Float32Array(CANVAS_SIZE * CANVAS_SIZE);
-    let lastFrameData = null;
+  // FIX #4: wire play-once observers after any HTML injection
+  initGifObservers();
+}
 
-    // -------- Utilities --------
+// =====================================================================
+//  Navigation
+// =====================================================================
+function renderNavigation() {
+  const nav = document.getElementById('nav-buttons');
+  nav.innerHTML = researchSteps.map(step => {
+    const isCurrent = step.id === currentStepId;
+    const isEnabled = step.isUnlocked;
+    let cls = 'nav-button px-4 py-3 rounded-xl w-full text-left font-semibold text-base transition-all duration-300 flex items-center';
+    if (isCurrent)      cls += ' bg-indigo-600 text-white transform scale-105';
+    else if (isEnabled) cls += ' bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700';
+    else                cls += ' bg-gray-50 text-gray-400 opacity-60';
+    return `<button class="${cls}" data-step-id="${step.id}" ${!isEnabled ? 'disabled' : ''}>
+              <span class="mr-3 font-extrabold">${step.id}.</span>${step.title}
+            </button>`;
+  }).join('');
+  nav.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.stepId);
+      if (researchSteps.find(s => s.id === id)?.isUnlocked) goToStep(id);
+    });
+  });
+}
 
-    // FIX #6: helper to set up HiDPI canvas and return a scaled context
-    function setCanvasHiDPI(canvas, width, height) {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return ctx;
-    }
+function goToStep(stepId) {
+  const newStep = researchSteps.find(s => s.id === stepId);
+  if (!newStep) return;
 
-    function generateStructuredNoise(size, alpha) {
-      const data = new Float32Array(size * size);
-      const octaves = 6;
-      let totalMax = 0;
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          let value = 0, amplitude = 1, maxAmp = 0;
-          for (let i = 0; i < octaves; i++) {
-            value += (Math.random() * 2 - 1) * amplitude;
-            maxAmp += amplitude;
-            amplitude /= Math.pow(2, alpha / 2);
-          }
-          value /= maxAmp;
-          data[y * size + x] = value;
-          totalMax = Math.max(totalMax, Math.abs(value));
-        }
-      }
-      for (let i = 0; i < data.length; i++) data[i] = (data[i] / totalMax + 1) / 2;
-      return data;
-    }
+  // progressive unlock
+  const nxt = researchSteps.find(s => s.id === stepId + 1);
+  if (nxt) nxt.isUnlocked = true;
 
-    function reinitializeNoise() {
-      const alpha = parseFloat(document.getElementById('noise-alpha').value);
-      noiseData = generateStructuredNoise(CANVAS_SIZE, alpha);
-      lastFrameData = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
-    }
+  currentStepId = stepId;
 
-    function drawFrame(ctx, size, frameData) {
-      const imageData = ctx.createImageData(size, size);
-      const d = imageData.data;
-      for (let i = 0; i < size * size; i++) {
-        const g = frameData[i] * 255;
-        const o = i * 4;
-        d[o] = g; d[o + 1] = g; d[o + 2] = g; d[o + 3] = 255;
-      }
-      ctx.putImageData(imageData, 0, 0);
-    }
+  // stop any running loops
+  if (animationFrameId)   { cancelAnimationFrame(animationFrameId);   animationFrameId   = null; }
+  if (trajectoryFrameId)  { cancelAnimationFrame(trajectoryFrameId);  trajectoryFrameId  = null; }
 
-    function calculateCurrentFrame(size, data, shiftX, shiftY) {
-      const out = new Float32Array(size * size);
-      const wrap = (v, m) => (v % m + m) % m;
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const sx = wrap(x - Math.floor(shiftX), size);
-          const sy = wrap(y - Math.floor(shiftY), size);
-          out[y * size + x] = data[sy * size + sx];
-        }
-      }
-      return out;
-    }
+  // content fade-in
+  const dispEl = document.getElementById('content-display');
+  dispEl.classList.remove('content-section');
+  requestAnimationFrame(() => requestAnimationFrame(() => dispEl.classList.add('content-section')));
 
-    function calculateTemporalDifference(size, curr, prev) {
-      const diff = new Float32Array(size * size);
-      let maxD = 0;
-      for (let i = 0; i < diff.length; i++) {
-        const v = Math.abs(curr[i] - prev[i]);
-        diff[i] = v; maxD = Math.max(maxD, v);
-      }
-      if (maxD > 0) for (let i = 0; i < diff.length; i++) diff[i] /= maxD;
-      return diff;
-    }
+  document.getElementById('content-title').textContent = newStep.title;
+  dispEl.innerHTML = newStep.content;
 
-    // -------- Simulation (Step 3) --------
-    // FIX #1: guard now checks currentStepId === 3 (was === 2)
-    function simulationLoop() {
-      if (currentStepId !== 3) {
-        if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-        return;
-      }
+  renderVisualization(newStep.visual, stepId);
+  setupControls(stepId);
+  renderNavigation();
+  updateControlLabels();
 
-      const speed = parseFloat(document.getElementById('drift-speed').value);
-      driftParams.shiftX += (Math.random() * speed - speed / 2) * 0.1;
-      driftParams.shiftY += (Math.random() * speed - speed / 2) * 0.1;
+  // FIX #5: scope MathJax only to visible content areas (not the hidden controls)
+  if (window.MathJax) {
+    MathJax.typesetPromise([dispEl, document.getElementById('visual-content')]);
+  }
 
-      const alphaNow = parseFloat(document.getElementById('noise-alpha').value);
-      if (alphaNow !== driftParams.alpha) {
-        driftParams.alpha = alphaNow;
-        reinitializeNoise();
-      }
+  // wire gif observers for any gifs injected into the content area
+  initGifObservers();
+}
 
-      const curr = calculateCurrentFrame(CANVAS_SIZE, noiseData, driftParams.shiftX, driftParams.shiftY);
-      const canvasCurrent = document.getElementById('canvas-current');
-      const canvasDiff = document.getElementById('canvas-diff');
+// =====================================================================
+//  FIX #5 — setupControls uses show()/hide() (data-hidden) not Tailwind classes
+// =====================================================================
+function setupControls(stepId) {
+  const controls = document.getElementById('simulation-controls');
+  const speedC   = document.getElementById('control-drift-speed');
+  const alphaC   = document.getElementById('control-noise-alpha');
+  const diffC    = document.getElementById('control-diffusion-D');
+  const tip      = document.getElementById('control-tip');
 
-      if (canvasCurrent && canvasDiff) {
-        // FIX #6: use HiDPI-aware context if not yet set up (one-time setup)
-        if (!canvasCurrent._hiDpiReady) {
-          setCanvasHiDPI(canvasCurrent, CANVAS_SIZE, CANVAS_SIZE);
-          setCanvasHiDPI(canvasDiff, CANVAS_SIZE, CANVAS_SIZE);
-          canvasCurrent._hiDpiReady = true;
-          canvasDiff._hiDpiReady = true;
-        }
-        const ctxC = canvasCurrent.getContext('2d');
-        const ctxD = canvasDiff.getContext('2d');
-        drawFrame(ctxC, CANVAS_SIZE, curr);
-        if (lastFrameData) {
-          const df = calculateTemporalDifference(CANVAS_SIZE, curr, lastFrameData);
-          drawFrame(ctxD, CANVAS_SIZE, df);
-        }
-        lastFrameData = curr;
-      }
+  // always hide everything first
+  hide(controls); hide(speedC); hide(alphaC); hide(diffC);
 
-      animationFrameId = requestAnimationFrame(simulationLoop);
-    }
+  if (stepId === 3) {
+    show(controls); show(speedC); show(alphaC);
+    tip.textContent = "Adjust these sliders to see how the resulting Temporal Difference changes.";
+    // simulation started inside renderDriftVisual when user picks a mode
+  } else if (stepId === 4) {
+    show(controls); show(diffC);
+    tip.textContent = "Observe how the Diffusion Constant (D) affects the volatility of the trajectory.";
+    resetTrajectory();
+    trajectoryLoop();
+  }
+}
 
-    // -------- Trajectory (Step 4) --------
-    // FIX #1: guard now checks currentStepId === 4 (was === 3)
-    function trajectoryLoop() {
-      if (currentStepId !== 4) {
-        if (trajectoryFrameId !== null) cancelAnimationFrame(trajectoryFrameId);
-        trajectoryFrameId = null;
-        return;
-      }
+function updateControlLabels() {
+  const s = document.getElementById('drift-speed');
+  if (s) document.getElementById('drift-speed-value').textContent = `${parseFloat(s.value).toFixed(1)} px/frame`;
+  const a = document.getElementById('noise-alpha');
+  if (a) document.getElementById('noise-alpha-value').textContent = `${parseFloat(a.value).toFixed(1)} (Natural scenes ≈ 1/f² at 2.0)`;
+  const d = document.getElementById('diffusion-d');
+  if (d) document.getElementById('diffusion-d-value').textContent = `${parseFloat(d.value).toFixed(1)} (Larger D = more erratic motion)`;
+}
 
-      const canvas = document.getElementById('canvas-trajectory');
-      if (!canvas) { trajectoryFrameId = requestAnimationFrame(trajectoryLoop); return; }
+function attachSliderListeners() {
+  document.getElementById('drift-speed').addEventListener('input', updateControlLabels);
+  document.getElementById('noise-alpha').addEventListener('input', updateControlLabels);
+  document.getElementById('diffusion-d').addEventListener('input', updateControlLabels);
+}
 
-      // FIX #6: one-time HiDPI setup for trajectory canvas
-      if (!canvas._hiDpiReady) {
-        setCanvasHiDPI(canvas, TRAJ_CANVAS_SIZE, TRAJ_CANVAS_SIZE);
-        canvas._hiDpiReady = true;
-      }
-
-      const ctx = canvas.getContext('2d');
-      const size = TRAJ_CANVAS_SIZE;
-      ctx.clearRect(0, 0, size, size);
-
-      const D = parseFloat(document.getElementById('diffusion-d').value);
-      trajectoryParams.D = D;
-      const variance = Math.sqrt(2 * D);
-      const randNorm = () => Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
-      const stepX = variance * randNorm() * 0.5;
-      const stepY = variance * randNorm() * 0.5;
-
-      trajectoryParams.currentX = Math.min(size, Math.max(0, trajectoryParams.currentX + stepX));
-      trajectoryParams.currentY = Math.min(size, Math.max(0, trajectoryParams.currentY + stepY));
-
-      trajectoryParams.history.push({ x: trajectoryParams.currentX, y: trajectoryParams.currentY });
-      if (trajectoryParams.history.length > trajectoryParams.maxHistory) trajectoryParams.history.shift();
-
-      ctx.beginPath(); ctx.lineWidth = 2; ctx.lineJoin = 'round';
-      for (let i = 1; i < trajectoryParams.history.length; i++) {
-        const a = (i / trajectoryParams.history.length) * 0.8 + 0.2;
-        ctx.strokeStyle = `rgba(239, 68, 68, ${a})`;
-        ctx.moveTo(trajectoryParams.history[i - 1].x, trajectoryParams.history[i - 1].y);
-        ctx.lineTo(trajectoryParams.history[i].x, trajectoryParams.history[i].y);
-      }
-      ctx.stroke();
-
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(trajectoryParams.currentX, trajectoryParams.currentY, 4, 0, 2 * Math.PI);
-      ctx.fill();
-
-      trajectoryFrameId = requestAnimationFrame(trajectoryLoop);
-    }
-
-    function resetTrajectory() {
-      trajectoryParams.history = [];
-      trajectoryParams.currentX = TRAJ_CANVAS_SIZE / 2;
-      trajectoryParams.currentY = TRAJ_CANVAS_SIZE / 2;
-      const canvas = document.getElementById('canvas-trajectory');
-      if (canvas) canvas.getContext('2d').clearRect(0, 0, TRAJ_CANVAS_SIZE, TRAJ_CANVAS_SIZE);
-    }
-
-    // -------- UI wiring --------
-    function renderNavigation() {
-      const nav = document.getElementById('nav-buttons');
-      nav.innerHTML = researchSteps.map(step => {
-        const isCurrent = step.id === currentStepId;
-        const isEnabled = step.isUnlocked;
-        let cls = 'nav-button px-4 py-3 rounded-xl w-full text-left font-semibold text-base transition-all duration-300 flex items-center';
-        if (isCurrent) cls += ' bg-indigo-600 text-white transform scale-105';
-        else if (isEnabled) cls += ' bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700';
-        else cls += ' bg-gray-50 text-gray-400 opacity-60';
-        return `<button id="nav-step-${step.id}" class="${cls}" data-step-id="${step.id}" ${!isEnabled ? 'disabled' : ''}><span class="mr-3 font-extrabold">${step.id}.</span>${step.title}</button>`;
-      }).join('');
-
-      nav.querySelectorAll('button').forEach(b => {
-        b.addEventListener('click', e => {
-          const id = parseInt(e.currentTarget.dataset.stepId);
-          if (researchSteps.find(s => s.id === id).isUnlocked) goToStep(id);
-        });
-      });
-    }
-
-    function goToStep(stepId) {
-      const newStep = researchSteps.find(s => s.id === stepId);
-      if (!newStep) return;
-
-      const nxt = researchSteps.find(s => s.id === stepId + 1);
-      if (nxt) nxt.isUnlocked = true; // progressive unlock
-
-      currentStepId = stepId;
-
-      const titleEl = document.getElementById('content-title');
-      const dispEl = document.getElementById('content-display');
-
-      // FIX #7: use rAF instead of void offsetWidth for more reliable animation restart
-      dispEl.classList.remove('content-section');
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          dispEl.classList.add('content-section');
-        });
-      });
-
-      titleEl.textContent = newStep.title;
-      dispEl.innerHTML = newStep.content;
-
-      renderVisualization(newStep.visual);
-      updateControlLabels();
-      setupControls(stepId);
-      renderNavigation();
-
-      if (window.MathJax) MathJax.typesetPromise?.();
-    }
-
-    function setupControls(stepId) {
-      const controls = document.getElementById('simulation-controls');
-      const speedC   = document.getElementById('control-drift-speed');
-      const alphaC   = document.getElementById('control-noise-alpha');
-      const diffC    = document.getElementById('control-diffusion-D');
-      const tip      = document.getElementById('control-tip');
-
-      controls.classList.add('hidden');
-      speedC.classList.add('hidden');
-      alphaC.classList.add('hidden');
-      diffC.classList.add('hidden');
-
-      if (animationFrameId)    { cancelAnimationFrame(animationFrameId);    animationFrameId    = null; }
-      if (trajectoryFrameId)   { cancelAnimationFrame(trajectoryFrameId);   trajectoryFrameId   = null; }
-
-      // FIX #1: stepId 3 → drift simulation, stepId 4 → trajectory (was 2 and 3)
-      if (stepId === 3) {
-        controls.classList.remove('hidden');
-        speedC.classList.remove('hidden');
-        alphaC.classList.remove('hidden');
-        tip.textContent = "Adjust these sliders to see how the resulting Temporal Difference changes.";
-        reinitializeNoise();
-        simulationLoop();
-      } else if (stepId === 4) {
-        controls.classList.remove('hidden');
-        diffC.classList.remove('hidden');
-        tip.textContent = "Observe how the Diffusion Constant (D) affects the volatility of the trajectory.";
-        resetTrajectory();
-        trajectoryLoop();
-      }
-    }
-
-    // FIX #5: attach live input listeners so labels update while dragging
-    function attachSliderListeners() {
-      document.getElementById('drift-speed').addEventListener('input', updateControlLabels);
-      document.getElementById('noise-alpha').addEventListener('input', updateControlLabels);
-      document.getElementById('diffusion-d').addEventListener('input', updateControlLabels);
-    }
-
-    function updateControlLabels() {
-      const s = document.getElementById('drift-speed');
-      if (s) document.getElementById('drift-speed-value').textContent = `${parseFloat(s.value).toFixed(1)} px/frame`;
-
-      const a = document.getElementById('noise-alpha');
-      if (a) document.getElementById('noise-alpha-value').textContent = `${parseFloat(a.value).toFixed(1)} (Natural scenes ≈ 1/f^2 at 2.0)`;
-
-      const d = document.getElementById('diffusion-d');
-      if (d) document.getElementById('diffusion-d-value').textContent = `${parseFloat(d.value).toFixed(1)} (Larger D = more erratic motion)`;
-    }
-
-    function renderVisualization(kind) {
-      const host = document.getElementById('visual-content');
-
-      const simHTML = `
-        <div class="space-y-4 w-full">
-          <p class="text-gray-600 text-center text-sm">Live simulation of $1/f^{\\alpha}$ input (left) and Temporal Difference (right).</p>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="flex flex-col items-center">
-              <h4 class="font-semibold text-lg text-gray-800 mb-2">Current Retinal Input</h4>
-              <canvas id="canvas-current" class="sim-canvas border-2 border-indigo-300"></canvas>
-            </div>
-            <div class="flex flex-col items-center">
-              <h4 class="font-semibold text-lg text-gray-800 mb-2 text-red-600">Temporal Difference ($\\Delta t$)</h4>
-              <canvas id="canvas-diff" class="sim-canvas border-2 border-red-300"></canvas>
-            </div>
-          </div>
-          <p class="text-xs text-gray-500 text-center pt-2">The difference image highlights motion energy introduced by drift.</p>
-        </div>`;
-
-      const trajHTML = `
-        <div class="space-y-4 w-full text-center">
-          <h4 class="font-semibold text-lg text-gray-800 mb-2">Brownian Motion Trajectory ($D$)</h4>
-          <canvas id="canvas-trajectory" class="mx-auto sim-canvas"></canvas>
-          <p class="text-xs text-gray-500 pt-2">The red line shows the foveal path over a scene; $D$ controls volatility.</p>
-        </div>`;
-
-      const resultsHTML = `
-        <div class="w-full text-center p-4">
-          <p class="text-2xl font-bold mb-4 text-red-700">Model Prediction: RF Transformation</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-6">
-            <div class="p-4 bg-red-100 rounded-lg shadow-md">
-              <h5 class="font-extrabold text-xl text-red-700">Temporal Selectivity $\\uparrow$</h5>
-              <p class="text-sm text-gray-700">Filters shift toward <b>bandpass</b> to encode higher temporal frequencies.</p>
-            </div>
-            <div class="p-4 bg-blue-100 rounded-lg shadow-md">
-              <h5 class="font-extrabold text-xl text-blue-700">Spatial Selectivity $\\downarrow$</h5>
-              <p class="text-sm text-gray-700">Filters become <b>more lowpass</b>, trading fine spatial detail for temporal precision.</p>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-              <h5 class="font-bold text-gray-900 mb-2">Receptive Field Evolution</h5>
-              <img src="assets/weights_evolution_video0.gif"
-                   loading="lazy" decoding="async"
-                   alt="Animation showing receptive field weights evolving during training"
-                   class="rounded-lg shadow-sm max-w-full mx-auto"
-                   onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Weights+Evolution+GIF+Not+Found';" />
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-                <h5 class="font-bold text-gray-900 mb-2">ON Cell Contours</h5>
-                <img src="assets/contours_ON_0.gif"
-                     loading="lazy" decoding="async"
-                     alt="Animation showing ON receptive field contours"
-                     class="rounded-lg shadow-sm max-w-full mx-auto"
-                     onerror="this.onerror=null; this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=ON+Contours+GIF+Not+Found';" />
-              </div>
-              <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-                <h5 class="font-bold text-gray-900 mb-2">OFF Cell Contours</h5>
-                <img src="assets/contours_OFF_0.gif"
-                     loading="lazy" decoding="async"
-                     alt="Animation showing OFF receptive field contours"
-                     class="rounded-lg shadow-sm max-w-full mx-auto"
-                     onerror="this.onerror=null; this.src='https://placehold.co/350x250/f3f4f6/4f46e5?text=OFF+Contours+GIF+Not+Found';" />
-              </div>
-            </div>
-          </div>
-        </div>`;
-
-      const modelHTML = `
-        <div class="w-full text-center p-2">
-          <h4 class="text-xl font-bold text-gray-900 mb-3">Model Architecture</h4>
-          <img src="assets/single_slide_model_architecture.gif"
-               loading="lazy" decoding="async"
-               alt="Animation showing the model architecture"
-               class="rounded-lg shadow-md max-w-5xl mx-auto"
-               onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Model+Architecture+GIF+Not+Found';" />
-          <!-- FIX #3: was "mx auto" (missing hyphen), corrected to "mx-auto" -->
-          <p class="mt-4 text-xs text-gray-500 max-w-4xl mx-auto">
-            Efficient coding model architecture used to learn receptive fields from noisy, drift-transformed inputs.
-            A natural image is sampled along a Brownian motion trajectory to simulate ocular drift.
-            The resulting drift movie is corrupted with Gaussian input noise to form a sensory-degraded signal.
-            This signal is passed through learned spatial and temporal weights, followed by a Softmax nonlinearity.
-            The response is then corrupted with Gaussian channel noise to produce the final noisy neural response.
-          </p>
-        </div>`;
-
-      // FIX #4: completed the truncated default case with the poster iframe
-      const defaultHTML = `
-        <a href="assets/SFN_poster_dennisPerez.pdf"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="block w-full text-center group">
-          <p class="text-sm font-semibold text-indigo-700 mb-4">
-            To see the full project end-to-end poster, click this image.
-          </p>
-          <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4 transition group-hover:shadow-xl group-hover:scale-[1.01]">
-            <iframe
-              src="assets/SFN_poster_dennisPerez.pdf"
-              class="w-full rounded-lg pointer-events-none"
-              style="height: 400px;"
-              title="SFN Poster Preview">
-            </iframe>
-          </div>
-        </a>`;
-
-      switch (kind) {
-        case "DriftSimulation":  host.innerHTML = simHTML;      break;
-        case "TrajectoryDemo":   host.innerHTML = trajHTML;     break;
-        case "ResultsSummary":   host.innerHTML = resultsHTML;  break;
-        case "Model":            host.innerHTML = modelHTML;    break;
-        default:                 host.innerHTML = defaultHTML;  break;
-      }
-    }
-
-    // -------- Boot --------
-    renderNavigation();
-    attachSliderListeners(); // FIX #5: wire up slider → label updates
-    goToStep(researchSteps[0].id);
-  </script>
+// =====================================================================
+//  Boot
+// =====================================================================
+renderNavigation();
+attachSliderListeners();
+goToStep(researchSteps[0].id);
+</script>
 </body>
 </html>
