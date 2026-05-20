@@ -594,17 +594,17 @@
         </div>`;
 
       const modelHTML = `
-        <div class="w-full text-center p-6">
-          <h4 class="text-xl font-bold text-gray-900 mb-4">Model Architecture</h4>
+        <div class="w-full text-center p-2">
+          <h4 class="text-xl font-bold text-gray-900 mb-3">Model Architecture</h4>
       
           <img src="assets/single_slide_model_architecture.gif"
                loading="lazy"
                decoding="async"
                alt="Animation showing the model architecture"
-               class="rounded-lg shadow-md max-w-full mx-auto"
+               class="rounded-lg shadow-md max-w-5xl mx-auto"
                onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Model+Architecture+GIF+Not+Found';" />
       
-          <p class="mt-4 text-xs text-gray-500">
+          <p class="mt-4 text-xs text-gray-500 max-w-4xl mx auto">
             Efficient coding model architecture used to learn receptive fields from noisy, drift-transformed inputs. 
             A natural image is sampled along a Brownian motion trajectory to simulate ocular drift. 
             The resulting drift movie is corrupted with Gaussian input noise to form a sensory-degraded signal. 
