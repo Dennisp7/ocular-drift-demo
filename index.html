@@ -123,14 +123,14 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-3.536a5 5 0 010-7.072m-2.121 7.072a8 8 0 010-11.314"/>
             </svg>
-            <div>
+            <!-- <div>
               <h4 class="font-bold text-lg">Listen to a breif walk-through of the project</h4>
               <audio controls class="mt-2 w-full">
                 <source src="assets/draft_website_recording.m4a" type="audio/mp4" />
                 Your browser does not support the audio element.
               </audio>
               <p class="text-xs mt-1">Project walk-through recording <code>src</code>.</p>
-            </div>
+            </div> -->
           </div>
           <p>Welcome to the interactive showcase of our work. Use the navigation steps on the left to move through the background, methods, and results.</p>
           <p class="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
@@ -162,7 +162,25 @@ const researchSteps = [
   {
     id: 1,
     title: "Project Overview",
-    content: `
+    content: 
+      <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg text-purple-800 flex items-center space-x-3">
+        <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15.536 8.464a5 5 0 010 7.072m2.121-7.072a8 8 0 010 11.314m-12.728-3.536a5 5 0 010-7.072m-2.121 7.072a8 8 0 010-11.314"/>
+        </svg>
+  
+        <div class="w-full">
+          <h4 class="font-bold text-lg">Listen to a brief walk-through of the project</h4>
+  
+          <audio controls class="mt-2 w-full">
+            <source src="assets/draft_website_recording.m4a" type="audio/mp4" />
+            Your browser does not support the audio element.
+          </audio>
+  
+          <p class="text-xs mt-1">Project walk-through recording.</p>
+        </div>
+      </div>
+      
       <p>Vision begins with the encoding process in the retina. To understand how vision works at this earliest stage, we first need to understand the signal it receives.</p>
       <p>That signal is not random. Natural scenes contain structured patterns across space and time, including edges, textures, and motion. At the same time, the eyes are constantly moving, which changes the image that falls on the retina from moment to moment.</p>
       <p>This project asks what the retinal input looks like mathematically, and whether those input statistics can help explain why retinal neurons respond the way they do.</p>
