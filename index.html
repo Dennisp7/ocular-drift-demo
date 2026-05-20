@@ -162,7 +162,7 @@ const researchSteps = [
   {
     id: 1,
     title: "Project Overview",
-    content: 
+    content: `
       <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg text-purple-800 flex items-center space-x-3">
         <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -182,9 +182,13 @@ const researchSteps = [
       </div>
       
       <p>Vision begins with the encoding process in the retina. To understand how vision works at this earliest stage, we first need to understand the signal it receives.</p>
+
       <p>That signal is not random. Natural scenes contain structured patterns across space and time, including edges, textures, and motion. At the same time, the eyes are constantly moving, which changes the image that falls on the retina from moment to moment.</p>
+
       <p>This project asks what the retinal input looks like mathematically, and whether those input statistics can help explain why retinal neurons respond the way they do.</p>
+
       <p>The central idea is that retinal organization can be studied as an efficient encoding problem: given the signal available at the retina, how should limited neural resources be allocated?</p>
+
       <div class="mt-6 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-indigo-800">
         <p class="font-semibold">This website walks through:</p>
         <ol class="list-decimal list-inside mt-2 space-y-1 text-sm">
@@ -194,9 +198,10 @@ const researchSteps = [
           <li>How an efficient coding model learns receptive fields from that input</li>
           <li>What the results suggest about retinal organization</li>
         </ol>
-      </div>`,
+      </div>
+    `,
     isUnlocked: true,
-    visual: "Poster"   // ← only step 1 gets the poster
+    visual: "Poster"
   },
   {
     id: 2,
