@@ -595,12 +595,18 @@
 
       const modelHTML = `
         <div class="w-full text-center p-6">
-          <h4 class="text-xl font-bold text-gray-900 mb-4">The Infomax Efficient Coding Objective</h4>
-
-          <div class="mt-4 text-2xl font-mono text-indigo-700">
-            $$\\text{Maximize}\\; I(X; R) \\; - \\; \\lambda \\cdot \\text{Cost}(R)$$
-          </div>
-          <p class="mt-4 text-xs text-gray-500">Where $X$ is the input movie and $R$ is the neural response.</p>
+          <h4 class="text-xl font-bold text-gray-900 mb-4">Model Architecture</h4>
+      
+          <img src="assets/single_slide_model_architecture.gif"
+               loading="lazy"
+               decoding="async"
+               alt="Animation showing the model architecture"
+               class="rounded-lg shadow-md max-w-full mx-auto"
+               onerror="this.onerror=null; this.src='https://placehold.co/700x350/f3f4f6/4f46e5?text=Model+Architecture+GIF+Not+Found';" />
+      
+          <p class="mt-4 text-xs text-gray-500">
+            Efficient coding model architecture used to learn receptive fields from static and drift-transformed inputs.
+          </p>
         </div>`;
 
       switch (kind) {
