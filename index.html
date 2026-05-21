@@ -585,7 +585,7 @@ function renderVisualization(kind, stepId) {
         Efficient coding model architecture used to learn receptive fields from noisy, drift-transformed inputs.
         A natural image is sampled along a Brownian motion trajectory to simulate ocular drift.
         The resulting drift movie is corrupted with Gaussian input noise.
-        This signal passes through learned spatial and temporal weights (Softmax nonlinearity),
+        This signal passes through learned spatial and temporal weights, followed by a Softmax nonlinearity,
         then Gaussian channel noise produces the final noisy neural response.
       </p>
     </div>`;
